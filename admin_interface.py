@@ -3,7 +3,7 @@ import firebase_admin
 import os
 from firebase_admin import credentials, auth
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='images')
 
 BASE_PATH_SA = os.path.join(
     os.path.abspath(os.path.dirname(__file__)),

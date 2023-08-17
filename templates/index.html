@@ -2,42 +2,81 @@
 <html>
 <head>
     <title>BACQROO Admin Interface</title>
+    <!-- Include Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <h1>Create User</h1>
-    <form method="POST" action="/create_user">
-        Email: <input type="email" name="email"><br>
-        Password: <input type="password" name="password"><br>
-        Role: <input type="text" name="role"><br>
-        <input type="submit" value="Create User">
-    </form>
+    <div class="container">
+        <div class="py-4">
+            <!-- Add logo at the top right corner -->
+            <div class="d-flex justify-content-end">
+                <img src="../images/logo.jpg" alt="Logo" height="100">
+            </div>
+            <h1 class="mb-4">Create User</h1>
+            <form method="POST" action="/create_user">
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="role">Role:</label>
+                    <select name="role" class="form-control" required>
+                        <option value="admin">Admin</option>
+                        <option value="client">Client</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Create User</button>
+            </form>
+        </div>
 
-    <h1>Manage Users</h1>
-    <table>
-        <tr>
-            <th>Email</th>
-            <th>UID</th>
-            <th>Role</th>
-            <th>Actions</th>
-        </tr>
-        {% for user in users %}
-        <tr>
-            <td>{{ user.email }}</td>
-            <td>{{ user.uid }}</td>
-            <td>{{ user.custom_claims['role'] }}</td>
-            <td>
-                <form method="POST" action="/update_user">
-                    <input type="hidden" name="uid" value="{{ user.uid }}">
-                    <input type="text" name="new_role" placeholder="New Role">
-                    <input type="submit" value="Update">
-                </form>
-                <form method="POST" action="/delete_user/{{ user.uid }}">
-                    <input type="submit" value="Delete">
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
+        <hr>
+
+        <div class="py-4">
+            <h1 class="mb-4">Manage Users</h1>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>UID</th>
+                        <th>Role</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.uid }}</td>
+                        <td>{{ user.custom_claims['role'] }}</td>
+                        <td>
+                            <form method="POST" action="/update_user">
+                                <input type="hidden" name="uid" value="{{ user.uid }}">
+                                <div class="input-group">
+                                    <select name="new_role" class="form-control">
+                                        <option value="admin">Admin</option>
+                                        <option value="client">Client</option>
+                                    </select>
+                                    <div class="input-group-append">
+                                        <button type="submit" class="btn btn-success">Update</button>
+                                    </div>
+                                </div>
+                            </form>
+                            <form method="POST" action="/delete_user/{{ user.uid }}">
+                                <button type="submit" class="btn btn-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Include Bootstrap JS (optional) -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
-
