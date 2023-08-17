@@ -25,10 +25,18 @@
                 <div class="form-group">
                     <label for="role">Role:</label>
                     <select name="role" class="form-control" required>
-                        <option value="admin">Admin</option>
-                        <option value="client">Client</option>
+                        <option value="admin">admin</option>
+                        <option value="client">client</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label for="domain">Domain:</label>
+                    <select name="domain" class="form-control" required>
+                        <option value="BACQROO-PDC">BACQROO-PDC</option>
+                        <option value="BACQROO-MEX">BACQROO-MEX</option>
+                    </select>
+                </div>
+                <div class="alert alert-danger" id="error-message" style="display: none;">{{ error_message }}</div>
                 <button type="submit" class="btn btn-primary">Create User</button>
             </form>
         </div>
@@ -51,14 +59,21 @@
                     <tr>
                         <td>{{ user.email }}</td>
                         <td>{{ user.uid }}</td>
-                        <td>{{ user.custom_claims['role'] }}</td>
+                        <td>
+                            <!-- Display the current role -->
+                            {% if user.custom_claims and 'role' in user.custom_claims %}
+                            {{ user.custom_claims['role'] }}
+                            {% else %}
+                            N/A
+                            {% endif %}
+                        </td>
                         <td>
                             <form method="POST" action="/update_user">
                                 <input type="hidden" name="uid" value="{{ user.uid }}">
                                 <div class="input-group">
                                     <select name="new_role" class="form-control">
-                                        <option value="admin">Admin</option>
-                                        <option value="client">Client</option>
+                                        <option value="Admin">admin</option>
+                                        <option value="client">client</option>
                                     </select>
                                     <div class="input-group-append">
                                         <button type="submit" class="btn btn-success">Update</button>
@@ -78,5 +93,12 @@
 
     <!-- Include Bootstrap JS (optional) -->
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- Display error message if present -->
+    {% if error_message %}
+    <script>
+        document.getElementById('error-message').textContent = "{{ error_message }}";
+        document.getElementById('error-message').style.display = 'block';
+    </script>
+    {% endif %}
 </body>
 </html>
