@@ -4,6 +4,15 @@
     <title>BACQROO Admin Interface</title>
     <!-- Include Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Position the logout button at the top left corner */
+        .left-logout {
+            position: absolute;
+            top: 0;
+            right: 0;
+            margin: 10px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -12,8 +21,28 @@
             <div class="d-flex justify-content-end">
                 <img src="../images/logo.jpg" alt="Logo" height="100">
             </div>
+            <div class="left-logout">
+                    <!-- Display logout link if authenticated -->
+                    {% if 'user_id' in session %}
+                    <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+                    {% endif %}
+            </div>
+            <div>
+                <!-- Display welcome message with user's display name or user_id -->
+                {% if 'user_id' in session %}
+                    {% if 'display_name' in session and session['display_name'] %}
+                        <h3>Welcome, {{ session['display_name'] }}!</h3>
+                    {% else %}
+                        <h3>Welcome, {{ session['user_id'] }}!</h3>
+                    {% endif %}
+                {% endif %}
+            </div>
             <h1 class="mb-4">Create User</h1>
             <form method="POST" action="/create_user">
+                <div class="form-group">
+                    <label for="display_name">Name:</label>
+                    <input type="text" name="display_name" class="form-control" required>
+                </div>
                 <div class="form-group">
                     <label for="email">Email:</label>
                     <input type="email" name="email" class="form-control" required>
@@ -34,9 +63,12 @@
                     <select name="domain" class="form-control" required>
                         <option value="BACQROO-PDC">BACQROO-PDC</option>
                         <option value="BACQROO-MEX">BACQROO-MEX</option>
+                        <option value="BACQROO-ALL">BACQROO-ALL</option>
                     </select>
                 </div>
-                <div class="alert alert-danger" id="error-message" style="display: none;">{{ error_message }}</div>
+                <div class="alert alert-danger" id="error-message" style="display: none;">
+                    {{ error_message }}
+                </div>
                 <button type="submit" class="btn btn-primary">Create User</button>
             </form>
         </div>
@@ -48,21 +80,32 @@
             <table class="table">
                 <thead>
                     <tr>
+                        <th>Name</th>
                         <th>Email</th>
                         <th>UID</th>
                         <th>Role</th>
+                        <th>Domain</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for user in users %}
                     <tr>
+                        <td>{{ user.display_name }}</td>
                         <td>{{ user.email }}</td>
                         <td>{{ user.uid }}</td>
                         <td>
                             <!-- Display the current role -->
                             {% if user.custom_claims and 'role' in user.custom_claims %}
                             {{ user.custom_claims['role'] }}
+                            {% else %}
+                            N/A
+                            {% endif %}
+                        </td>
+                        <td>
+                            <!-- Display the current domain -->
+                            {% if user.custom_claims and 'domain' in user.custom_claims %}
+                            {{ user.custom_claims['domain'] }}
                             {% else %}
                             N/A
                             {% endif %}
