@@ -15,6 +15,95 @@
             margin: 10px;
         }
     </style>
+    <style>
+    /* Style primary buttons */
+    .btn-primary {
+        background-color: #3498db;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    /* Style danger buttons */
+    .btn-danger {
+        background-color: #e74c3c;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    /* Style success buttons */
+    .btn-success {
+        background-color: #2ecc71;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    </style>
+    <style>
+    /* Style the checkbox container */
+    .checkbox-container {
+        display: inline-block;
+        position: relative;
+        padding-left: 35px; /* Adjust the spacing */
+        margin-bottom: 12px;
+        cursor: pointer;
+        font-size: 18px;
+        user-select: none;
+    }
+
+    /* Style the custom checkbox */
+    .checkbox-container input {
+        position: absolute;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    /* Style the checkmark */
+    .checkmark {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 25px; /* Adjust the size */
+        width: 25px; /* Adjust the size */
+        background-color: #eee; /* Soft background color */
+        border-radius: 50%;
+    }
+
+    /* Style the checked state of the checkmark */
+    .checkbox-container input:checked ~ .checkmark {
+        background-color: #2196F3; /* Stylish color for checked state */
+    }
+
+    /* Style the checkmark icon */
+    .checkmark:after {
+        content: "";
+        position: absolute;
+        display: none;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 12px; /* Adjust the size */
+        height: 12px; /* Adjust the size */
+        border-radius: 50%;
+        background: white;
+    }
+
+    /* Display the checkmark icon when the checkbox is checked */
+    .checkbox-container input:checked ~ .checkmark:after {
+        display: block;
+    }
+    </style>
+
 </head>
 <body>
     <div class="container">
@@ -77,6 +166,11 @@
 
         <hr>
 
+        <div class="py-2">
+            <label for="searchEmail">Search by Email:</label>
+            <input type="text" id="searchEmail" class="form-control" onkeyup="filterUsers()">
+        </div>
+
         <div class="py-4">
             <h1 class="mb-4">Manage Users</h1>
             <table class="table">
@@ -89,6 +183,7 @@
                         <th>Role</th>
                         <th>Domain</th>
                         <th>Actions</th>
+                        <th>Select</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -103,7 +198,7 @@
                             {% endif %}
                         </td>
                         <td>{{ user.display_name }}</td>
-                        <td>{{ user.email }}</td>
+                        <td class="email-cell">{{ user.email }}</td>
                         <td>{{ user.uid }}</td>
                         <td class="row-cell">
                             <!-- Display the current role -->
@@ -124,26 +219,33 @@
                         <td>
                             <form method="POST" onsubmit="updateUserRole('{{ user.uid }}'); return false;">
                                 <input type="hidden" name="uid" value="{{ user.uid }}">
-                                <div class="input-group">
-                                    <select id="newRoleDropdown" class="form-control">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <select id="newRoleDropdown" class="form-control" style="width: 150px;">
                                         <option value="admin">admin</option>
                                         <option value="client">client</option>
                                     </select>
                                     <div class="input-group-append">
-                                        <button type="submit" class="btn btn-success">Update</button>
+                                        <button type="submit" class="btn btn-success ml-2">Update</button>
                                     </div>
                                 </div>
                             </form>
                             <form method="POST" onsubmit="updateUserStatus('{{ user.uid }}', 'toggle_disable'); return false;">
                                 <input type="hidden" name="uid" value="{{ user.uid }}">
                                 <input type="hidden" name="action" value="toggle_disable">
-                                <button type="submit" class="btn btn-{{ 'danger' if user.disabled else 'success' }}">
+                                <button type="submit" class="btn btn-{{ 'danger' if user.disabled else 'success' }} btn-sm">
                                     {{ 'Enable' if user.disabled else 'Disable' }}
                                 </button>
                             </form>
                             <form method="POST" action="/delete_user/{{ user.uid }}">
-                                <button type="submit" class="btn btn-danger">Delete</button>
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                             </form>
+                        </td>
+                       <td>
+                            <!-- Add a checkbox for selecting users with custom styling -->
+                            <label class="checkbox-container">
+                                <input type="checkbox" class="user-checkbox" data-uid="{{ user.uid }}">
+                                <span class="checkmark"></span>
+                            </label>
                         </td>
                     </tr>
                     {% endfor %}
@@ -217,7 +319,7 @@
         function updateTableRow(user, updateString) {
             const tableRow = document.querySelector(`tr[data-uid="${user.uid}"]`);
             if (tableRow) {
-                if (updateString === "UpdateUserStatus") {
+                if (updateString == "UpdateUserStatus") {
                     const disabledCell = tableRow.querySelector('.disabled-cell');
                     disabledCell.textContent = user.disabled ? 'Yes' : 'No';
                 } else {
@@ -237,6 +339,21 @@
 
             // Clear the error message from the session
             fetch('/clear_error_message', { method: 'POST' });
+        }
+    </script>
+    <script>
+        function filterUsers() {
+            const searchInput = document.getElementById('searchEmail').value.toLowerCase();
+            const tableRows = document.querySelectorAll('tbody tr');
+
+            tableRows.forEach(row => {
+                const emailCell = row.querySelector('.email-cell');
+                if (emailCell.textContent.toLowerCase().includes(searchInput)) {
+                    row.style.display = 'table-row';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
         }
     </script>
 
