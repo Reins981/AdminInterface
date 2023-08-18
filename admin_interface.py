@@ -4,13 +4,15 @@ from flask import (
     request,
     redirect,
     url_for,
-    session
+    session,
+    jsonify
 )
 import firebase_admin
 from functools import wraps
 import os
 import re
 import requests
+import asyncio
 from firebase_admin import credentials, auth
 from utils import (
     get_url_for_firebase_auth,
@@ -117,6 +119,14 @@ def index():
     return render_template('index.html', users=users)
 
 
+@app.route('/clear_error_message', methods=['POST'])
+@login_required
+def clear_error_message():
+    if 'error_message' in session:
+        session.pop('error_message')
+    return ''
+
+
 @app.route('/create_user', methods=['POST'])
 @login_required
 def create_user():
@@ -128,24 +138,66 @@ def create_user():
 
     # Check if password meets the criteria
     if len(password) < 8 or not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
-        users = auth.list_users().users
-        return render_template(
-            'index.html',
-            users=users,
-            error_message="Password must be at least 8 characters long "
-                          "and include a special character."
-        )
+        # Store the error message in the session
+        error_message = ("Password must be at least 8 characters long "
+                         "and include a special character.")
+        session['error_message'] = error_message
+        return redirect(url_for('index'))
 
     try:
         # Create a new user with email and password
         user = auth.create_user(email=email, password=password, display_name=username)
 
         # Assign custom claims to indicate user role
-        auth.set_custom_user_claims(user.uid, {'role': role, 'domain': domain})
+        auth.set_custom_user_claims(user.uid, {
+            'role': role,
+            'domain': domain,
+            "disabled": user.disabled
+        })
 
         return redirect(url_for('index'))
     except Exception as e:
-        return str(e)
+        # Store the error message in the session
+        session['error_message'] = str(e)
+        return redirect(url_for('index'))
+
+
+@app.route('/update_user_status', methods=['POST'])
+@login_required
+def update_user_status():
+    uid = request.form['uid']
+    action = request.form.get("action")
+
+    try:
+        # Get the user's current custom claims
+        user = auth.get_user(uid)
+
+        # Handle the disable/enable action
+        if action == "toggle_disable":
+            # Toggle the user's disable status
+            auth.update_user(uid, disabled=not user.disabled)
+
+        # Get the updated user data after toggling the status
+        updated_user = auth.get_user(uid)
+
+        response_data = {
+            "success": True,
+            "message": "User status updated successfully.",
+            "user": {
+                "uid": updated_user.uid,
+                "disabled": updated_user.disabled,
+                # Include any other user properties you want to update in the UI
+            }
+        }
+
+        return jsonify(response_data)
+    except Exception as e:
+        response_data = {
+            "success": False,
+            "message": str(e),
+            "user": None
+        }
+        return jsonify(response_data)
 
 
 @app.route('/update_user', methods=['POST'])
@@ -157,23 +209,43 @@ def update_user():
     try:
         # Get the user's current custom claims
         user = auth.get_user(uid)
-        current_custom_claims = user.custom_claims
 
-        current_custom_claims = dict() if current_custom_claims is None else current_custom_claims
+        if new_role:
+            current_custom_claims = user.custom_claims
 
-        # Delete the old role claim if it exists
-        if current_custom_claims and 'role' in current_custom_claims:
-            del current_custom_claims['role']
+            current_custom_claims = dict() if current_custom_claims is None \
+                else current_custom_claims
 
-        # Update the current custom claims with the new role
-        current_custom_claims['role'] = new_role
+            # Delete the old role claim if it exists
+            if current_custom_claims and 'role' in current_custom_claims:
+                del current_custom_claims['role']
 
-        # Update user's custom claims to change role
-        auth.set_custom_user_claims(uid, current_custom_claims)
+            # Update the current custom claims with the new role
+            current_custom_claims['role'] = new_role
 
-        return redirect(url_for('index'))
+            # update user's custom claims to change role
+            auth.set_custom_user_claims(uid, current_custom_claims)
+
+        updated_user = auth.get_user(uid)
+        custom_claims_updated = updated_user.custom_claims
+
+        response_data = {
+            "success": True,
+            "message": "User role updated successfully.",
+            "user": {
+                "uid": user.uid,
+                "role": custom_claims_updated['role']
+            }
+        }
+
+        return jsonify(response_data)
     except Exception as e:
-        return str(e)
+        response_data = {
+            "success": False,
+            "message": str(e),
+            "user": None,
+        }
+        return jsonify(response_data)
 
 
 @app.route('/delete_user/<uid>', methods=['POST'])
@@ -185,7 +257,9 @@ def delete_user(uid):
 
         return redirect(url_for('index'))
     except Exception as e:
-        return str(e)
+        # Store the error message in the session
+        session['error_message'] = str(e)
+        return redirect(url_for('index'))
 
 
 def current_user_domain(session_lookup=True, current_user=None):
@@ -240,7 +314,9 @@ def fetch_users_by_domain(domain):
         return sort_users(users_by_domain)
 
     except Exception as e:
-        return "Error fetching users by domain:", str(e)
+        # Store the error message in the session
+        session['error_message'] = str(e)
+        return redirect(url_for('index'))
 
 
 if __name__ == '__main__':

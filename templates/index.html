@@ -2,6 +2,8 @@
 <html>
 <head>
     <title>BACQROO Admin Interface</title>
+    <!-- Include jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Include Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -80,6 +82,7 @@
             <table class="table">
                 <thead>
                     <tr>
+                        <th>Disabled</th>
                         <th>Name</th>
                         <th>Email</th>
                         <th>UID</th>
@@ -90,11 +93,19 @@
                 </thead>
                 <tbody>
                     {% for user in users %}
-                    <tr>
+                    <tr data-uid="{{ user.uid }}">
+                        <td class="disabled-cell">
+                            <!-- Display the disabled status -->
+                            {% if user.disabled %}
+                            Yes
+                            {% else %}
+                            No
+                            {% endif %}
+                        </td>
                         <td>{{ user.display_name }}</td>
                         <td>{{ user.email }}</td>
                         <td>{{ user.uid }}</td>
-                        <td>
+                        <td class="row-cell">
                             <!-- Display the current role -->
                             {% if user.custom_claims and 'role' in user.custom_claims %}
                             {{ user.custom_claims['role'] }}
@@ -111,17 +122,24 @@
                             {% endif %}
                         </td>
                         <td>
-                            <form method="POST" action="/update_user">
+                            <form method="POST" onsubmit="updateUserRole('{{ user.uid }}'); return false;">
                                 <input type="hidden" name="uid" value="{{ user.uid }}">
                                 <div class="input-group">
-                                    <select name="new_role" class="form-control">
-                                        <option value="Admin">admin</option>
+                                    <select id="newRoleDropdown" class="form-control">
+                                        <option value="admin">admin</option>
                                         <option value="client">client</option>
                                     </select>
                                     <div class="input-group-append">
                                         <button type="submit" class="btn btn-success">Update</button>
                                     </div>
                                 </div>
+                            </form>
+                            <form method="POST" onsubmit="updateUserStatus('{{ user.uid }}', 'toggle_disable'); return false;">
+                                <input type="hidden" name="uid" value="{{ user.uid }}">
+                                <input type="hidden" name="action" value="toggle_disable">
+                                <button type="submit" class="btn btn-{{ 'danger' if user.disabled else 'success' }}">
+                                    {{ 'Enable' if user.disabled else 'Disable' }}
+                                </button>
                             </form>
                             <form method="POST" action="/delete_user/{{ user.uid }}">
                                 <button type="submit" class="btn btn-danger">Delete</button>
@@ -134,8 +152,99 @@
         </div>
     </div>
 
+    <script>
+        function updateUserStatus(uid, action) {
+            fetch('/update_user_status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `uid=${encodeURIComponent(uid)}&action=${encodeURIComponent(action)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update UI or show a success message
+                    // Reload the Manage Users table or update the relevant parts
+                    if (data.user) {
+                        updateTableRow(data.user, "UpdateUserStatus");
+                    }
+                } else {
+                    // Handle error
+                    console.error(data.message);
+                    document.getElementById('error-message').textContent = data.message;
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                document.getElementById('error-message').textContent = error;
+            });
+        }
+
+        function updateUserRole(uid) {
+
+            const newRoleDropdown = document.getElementById('newRoleDropdown');
+            const selectedRole = newRoleDropdown.value;
+
+            fetch('/update_user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `uid=${encodeURIComponent(uid)}&new_role=${encodeURIComponent(selectedRole)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update UI or show a success message
+                    // Reload the Manage Users table or update the relevant parts
+                    if (data.user) {
+                        updateTableRow(data.user, "UpdateUserRole");
+                    }
+                } else {
+                    // Handle error
+                    console.error(data.message);
+                    document.getElementById('error-message').textContent = data.message;
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                document.getElementById('error-message').textContent = error;
+            });
+        }
+
+        // Update the table row with new user data
+        function updateTableRow(user, updateString) {
+            const tableRow = document.querySelector(`tr[data-uid="${user.uid}"]`);
+            if (tableRow) {
+                if (updateString === "UpdateUserStatus") {
+                    const disabledCell = tableRow.querySelector('.disabled-cell');
+                    disabledCell.textContent = user.disabled ? 'Yes' : 'No';
+                } else {
+                    const rowCell = tableRow.querySelector('.row-cell');
+                    rowCell.textContent =  user.role
+                }
+            }
+        }
+    </script>
+    <script>
+        // Check if the error message is present in the session
+        const errorMessage = "{{ session.get('error_message', "") }}";
+        if (errorMessage != "") {
+            const errorMessageId = document.getElementById('error-message');
+            errorMessageId.textContent = errorMessage;
+            errorMessageId.style.display = 'block';
+
+            // Clear the error message from the session
+            fetch('/clear_error_message', { method: 'POST' });
+        }
+    </script>
+
+    <!-- Include jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Include Bootstrap JS (optional) -->
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
     <!-- Display error message if present -->
     {% if error_message %}
     <script>
