@@ -13,18 +13,34 @@ import os
 import re
 import requests
 import asyncio
-from firebase_admin import credentials, auth
+from firebase_admin import (
+    credentials,
+    auth,
+    firestore
+)
 from utils import (
     get_url_for_firebase_auth,
+    upload_document,
     CRED
 )
+from thread_base import Worker, ThreadPool, TaskCounter
 
 app = Flask(__name__, static_folder='images')
 app.secret_key = 'tz957fpzG0Pib5GPFd1rdv82v1abxbrZX9btUAL_dpI'
 
+# Define a temporary folder for storing uploaded files
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "temporary_upload")
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+# Ensure the temporary upload folder exists
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
 # Initialize Firebase Admin SDK
 cred = credentials.Certificate(CRED)
-firebase_admin.initialize_app(cred)
+firebase_admin.initialize_app(cred, {
+            'storageBucket': 'documentmanagement-f7ce9.appspot.com'
+        })
 
 
 def requires_admin_role():
@@ -317,6 +333,54 @@ def fetch_users_by_domain(domain):
         # Store the error message in the session
         session['error_message'] = str(e)
         return redirect(url_for('index'))
+
+
+@app.route('/handle_selection', methods=['POST'])
+@login_required
+def handle_selection():
+    # Create a reference to the Firestore database
+    db = firestore.client()
+    selected_user_uid = request.form['user_dropdown']
+    selected_email = request.form['selected_email']
+    selected_domain = request.form['selected_domain']
+
+    response_data = {
+        'success': True,
+        'message': 'Document(s) uploaded successfully'
+    }
+
+    upload_files = request.files.getlist('documents')
+    for upload_file in upload_files:
+        document_name = upload_file.filename
+        category = request.form['selected_category']
+        # Return a JSON response indicating success
+
+        # Save the upload file to the temporary folder
+        temp_file_path = os.path.join(app.config["UPLOAD_FOLDER"], document_name)
+        upload_file.save(temp_file_path)
+
+        # Schedule the upload to happen after a short delay
+        try:
+            task_counter = TaskCounter()
+            pool = ThreadPool(num_threads=1,
+                              task_counter=task_counter)
+            pool.add_task(
+                upload_document,
+                db,
+                selected_user_uid,
+                selected_email,
+                selected_domain,
+                category,
+                temp_file_path,
+            )
+        except Exception as e:
+            response_data = {
+                'success': False,
+                "message": str(e)
+            }
+            return jsonify(response_data)
+
+    return jsonify(response_data)
 
 
 if __name__ == '__main__':

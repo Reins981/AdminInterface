@@ -160,6 +160,9 @@
                 <div class="alert alert-danger" id="error-message" style="display: none;">
                     {{ error_message }}
                 </div>
+                <div class="alert alert-success" id="success-message" style="display: none;">
+                    Document(s) uploaded successfully!
+                </div>
                 <button type="submit" class="btn btn-primary">Create User</button>
             </form>
         </div>
@@ -174,16 +177,20 @@
         <div class="py-4">
 
             <!-- Upload Document Form -->
-            <form id="uploadForm" method="POST" action="/upload_document" enctype="multipart/form-data">
+            <form id="uploadForm" method="POST" action="/handle_selection" enctype="multipart/form-data">
                 <div class="input-group mb-3">
                     <select id="userDropdown" class="form-control">
                         {% for user in users %}
                         <option value="{{ user.uid }}">{{ user.email }}</option>
                         {% endfor %}
                     </select>
+                    <select id="categoryDropdown" class="form-control">
+                        <option value="Tax">Tax</option>
+                        <option value="Financial">Financial</option>
+                    </select>
                     <div class="custom-file">
-                        <input type="file" name="document" class="custom-file-input" id="documentInput">
-                        <label class="custom-file-label" for="documentInput">Choose file</label>
+                        <input type="file" name="document" class="custom-file-input" id="documentInput" multiple>
+                        <label class="custom-file-label" for="documentInput">Choose file(s)</label>
                     </div>
                     <div class="input-group-append">
                         <button type="submit" class="btn btn-primary">Upload</button>
@@ -207,7 +214,7 @@
                 </thead>
                 <tbody>
                     {% for user in users %}
-                    <tr data-uid="{{ user.uid }}">
+                    <tr data-uid="{{ user.uid }}" data-custom-claims="{{ user.custom_claims['domain'] }}">
                         <td class="disabled-cell">
                             <!-- Display the disabled status -->
                             {% if user.disabled %}
@@ -373,6 +380,105 @@
                     row.style.display = 'none';
                 }
             });
+        }
+    </script>
+    <script>
+        const userDropdown = document.getElementById('userDropdown');
+        const documentInput = document.getElementById('documentInput');
+        const errorMessageElement = document.getElementById('error-message');
+        const successMessageElement = document.getElementById('success-message');
+
+        // Trigger the change event manually on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDocumentInput();
+        });
+
+        userDropdown.addEventListener('change', () => {
+            updateDocumentInput();
+        });
+
+        function updateDocumentInput() {
+            const selectedUid = userDropdown.value;
+            const selectedEmail = userDropdown.options[userDropdown.selectedIndex].text;
+            const selectedUserRow = document.querySelector(`tr[data-uid="${selectedUid}"]`);
+
+            // Get the user's custom claims as a string from the DOM element
+            const customClaimsString = selectedUserRow.getAttribute('data-custom-claims');
+
+            // Parse the custom claims string as JSON to access the domain
+            const selectedDomain = customClaimsString;
+
+            documentInput.labels[0].textContent = `Choose file for ${selectedEmail}`;
+            documentInput.dataset.uid = selectedUid;
+            documentInput.dataset.email = selectedEmail;
+            documentInput.dataset.domain = selectedDomain;
+        }
+
+        const uploadForm = document.getElementById('uploadForm');
+        uploadForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            // Check if a document is selected
+            if (documentInput.files.length === 0) {
+                errorMessageElement.textContent = 'Please select a document to upload.';
+                errorMessageElement.style.display = 'block';
+                return; // Stop further processing
+            }
+
+            // Clear any previous error messages
+            errorMessageElement.style.display = 'none';
+
+            const selectedUid = documentInput.dataset.uid;
+            const selectedEmail = documentInput.dataset.email;
+            const selectedDomain = documentInput.dataset.domain;
+
+            // Include the selected UID in the form data
+            const formData = new FormData(uploadForm);
+            formData.append('user_dropdown', selectedUid);
+            formData.append('selected_email', selectedEmail);
+            formData.append('selected_domain', selectedDomain);
+            // Add the category
+            const selectedCategory = getSelectedCategory();
+            formData.append('selected_category', selectedCategory);
+
+            // Loop through selected files and append them to the FormData object
+            for (const file of documentInput.files) {
+                formData.append('documents', file);
+            }
+
+            try {
+                // Perform the document upload using fetch
+                const response = await fetch('/handle_selection', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const responseData = await response.json();
+
+                // Handle the response and UI updates
+                if (responseData.success) {
+                    // Update UI or show a success message
+                    console.log(responseData.message);
+                    errorMessageElement.style.display = 'none'; // Hide the error message
+                    successMessageElement.style.display = 'block'; // Show the success message
+
+                    // Clear the selected file from the input element
+                    documentInput.value = '';
+                } else {
+                    // Handle error
+                    console.error(responseData.message);
+                    errorMessageElement.textContent = 'Please select a document to upload.';
+                    errorMessageElement.style.display = 'block';
+                }
+            } catch (error) {
+                errorMessageElement.textContent = 'Please select a document to upload.';
+                errorMessageElement.style.display = 'block';
+            }
+        });
+
+        function getSelectedCategory() {
+            const categoryDropdown = document.getElementById('categoryDropdown');
+            return categoryDropdown.value;
         }
     </script>
 
