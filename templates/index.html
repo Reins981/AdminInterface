@@ -229,6 +229,13 @@
             </form>
 
             <h1 class="mb-4">Manage Users</h1>
+            <div class="py-4">
+                <label class="checkbox-container">
+                    <input type="checkbox" id="selectAllUsers">
+                    <span class="checkmark"></span>
+                    Select All
+                </label>
+            </div>
             <table class="table">
                 <thead>
                     <tr>
@@ -417,7 +424,8 @@
         const documentInput = document.getElementById('documentInput');
         const errorMessageElement = document.getElementById('error-message');
         const successMessageElement = document.getElementById('success-message');
-
+        const selectAllUsersCheckbox = document.getElementById('selectAllUsers');
+        const userCheckboxes = document.querySelectorAll('.user-checkbox');
 
         // Trigger the change event manually on page load
         document.addEventListener('DOMContentLoaded', () => {
@@ -427,6 +435,47 @@
         userDropdown.addEventListener('change', () => {
             updateDocumentInput();
         });
+
+        selectAllUsersCheckbox.addEventListener('change', () => {
+            const isChecked = selectAllUsersCheckbox.checked;
+            userDropdown.disabled = isChecked;
+            userCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+            });
+            updateDocumentInputSelection();
+        });
+
+        userCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                updateDocumentInputSelection();
+            });
+        });
+
+
+        function updateDocumentInputSelection() {
+            const selectedUids = [];
+            const selectedEmails = [];
+            const selectedDomains = [];
+
+            userCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    const selectedUserRow = document.querySelector(`tr[data-uid="${checkbox.dataset.uid}"]`);
+                    const customClaimsString = selectedUserRow.getAttribute('data-custom-claims');
+                    const selectedDomain = customClaimsString;
+
+                    selectedUids.push(checkbox.dataset.uid);
+                    selectedEmails.push(selectedUserRow.cells[2].textContent);
+                    selectedDomains.push(selectedDomain);
+                }
+            });
+
+            const selectedEmailsText = selectedEmails.join(', ');
+
+            documentInput.labels[0].textContent = `Choose file(s) for ${selectedEmailsText}`;
+            documentInput.dataset.uids = selectedUids.join(',');
+            documentInput.dataset.emails = selectedEmails.join(',');
+            documentInput.dataset.domains = selectedDomains.join(',');
+        }
 
         function updateDocumentInput() {
             const selectedUid = userDropdown.value;
@@ -537,6 +586,14 @@
         }
 
     </script>
+    <script>
+        window.addEventListener('beforeunload', function(event) {
+            fetch('/logout', {
+                method: 'POST'
+            });
+        });
+    </script>
+
 
     <!-- Include jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
