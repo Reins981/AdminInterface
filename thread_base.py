@@ -61,13 +61,16 @@ class Worker(StoppableThread):
 
 class TaskCounter(object):
     def __init__(self):
+        self.lock = threading.RLock()
         self.task_counter = 0
 
     def set_task_counter(self):
-        self.task_counter += 1
+        with self.lock:
+            self.task_counter += 1
 
     def get_task_counter(self):
-        return self.task_counter
+        with self.lock:
+            return self.task_counter
 
 
 class ThreadPool:
@@ -100,23 +103,10 @@ class ThreadPool:
         # Add a task to the queue
         self.tasks.put((func, args, kwargs))
 
-    def wait_upload_completion(self, func, init_value=1):
-        print('Waiting for task completion..')
-        # Wait for completion of all the tasks in the queue
-        parent_task_counter = self.task_counter.get_task_counter()
-        while parent_task_counter < self.num_threads:
-            if init_value >= 100:
-                init_value = 1
-            Clock.schedule_once(lambda *dt: func(init_value))
-            init_value *= 2
-            time.sleep(0.5)
-            parent_task_counter = self.task_counter.get_task_counter()
-        Clock.schedule_once(lambda *dt: func(100))
-        print("%d tasks completed" % self.num_threads)
-
     def wait_completion(self):
         print('Waiting for task completion..')
         # Wait for completion of all the tasks in the queue
         while self.task_counter.get_task_counter() < self.num_threads:
             pass
+
         print("%d tasks completed" % self.num_threads)

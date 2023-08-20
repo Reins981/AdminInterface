@@ -5,13 +5,15 @@ from flask import (
     redirect,
     url_for,
     session,
-    jsonify
+    jsonify,
+    Response
 )
 import firebase_admin
 from functools import wraps
 import os
 import re
 import requests
+import shutil
 import asyncio
 from firebase_admin import (
     credentials,
@@ -335,6 +337,29 @@ def fetch_users_by_domain(domain):
         return redirect(url_for('index'))
 
 
+@app.route('/clear_session', methods=['GET'])
+def clear_session():
+    if 'total_file_size' in session:
+        session.pop('total_file_size')
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False})
+
+
+@login_required
+def clean_directory(directory_path):
+    for filename in os.listdir(directory_path):
+        file_path = os.path.join(directory_path, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            return f"Failed to delete {file_path}. Reason: {e}"
+    return 'success'
+
+
 @app.route('/handle_selection', methods=['POST'])
 @login_required
 def handle_selection():
@@ -350,6 +375,25 @@ def handle_selection():
     }
 
     upload_files = request.files.getlist('documents')
+
+    # First clean the temo dir
+    status = clean_directory(app.config["UPLOAD_FOLDER"])
+    if status != 'success':
+        response_data['success'] = False
+        response_data['message'] = status
+        return response_data
+
+    # Calculate total size first
+    total_file_size = 0
+    for upload_file in upload_files:
+        document_name = upload_file.filename
+        temp_file_path = os.path.join(app.config["UPLOAD_FOLDER"], document_name)
+        upload_file.save(temp_file_path)
+        total_file_size += os.path.getsize(temp_file_path)
+
+    task_counter = TaskCounter()
+    pool = ThreadPool(num_threads=len(upload_files),
+                      task_counter=task_counter)
     for upload_file in upload_files:
         document_name = upload_file.filename
         category = request.form['selected_category']
@@ -357,13 +401,9 @@ def handle_selection():
 
         # Save the upload file to the temporary folder
         temp_file_path = os.path.join(app.config["UPLOAD_FOLDER"], document_name)
-        upload_file.save(temp_file_path)
 
         # Schedule the upload to happen after a short delay
         try:
-            task_counter = TaskCounter()
-            pool = ThreadPool(num_threads=1,
-                              task_counter=task_counter)
             pool.add_task(
                 upload_document,
                 db,
@@ -379,6 +419,8 @@ def handle_selection():
                 "message": str(e)
             }
             return jsonify(response_data)
+
+    pool.wait_completion()
 
     return jsonify(response_data)
 

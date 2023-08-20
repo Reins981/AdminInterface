@@ -103,6 +103,32 @@
         display: block;
     }
     </style>
+    <style>
+    .animation-container {
+        display: none;
+        width: 100%;
+        height: 5px; /* Set the desired height for the animation */
+        background-color: #f0f0f0; /* Background color of the animation container */
+        overflow: hidden;
+    }
+
+    .knight-rider {
+        width: 20px; /* Width of the moving element */
+        height: 100%;
+        background-color: #3498db; /* Color of the moving element */
+        animation: none; /* Apply the animation */
+    }
+
+    @keyframes knightRider {
+        0%, 100% {
+            transform: translateX(-100%);
+        }
+        50% {
+            transform: translateX(100%);
+        }
+    }
+    </style>
+
 
 </head>
 <body>
@@ -195,6 +221,10 @@
                     <div class="input-group-append">
                         <button type="submit" class="btn btn-primary">Upload</button>
                     </div>
+                </div>
+                <!-- Container for the animation -->
+                <div class="animation-container">
+                    <div class="knight-rider"></div>
                 </div>
             </form>
 
@@ -388,6 +418,7 @@
         const errorMessageElement = document.getElementById('error-message');
         const successMessageElement = document.getElementById('success-message');
 
+
         // Trigger the change event manually on page load
         document.addEventListener('DOMContentLoaded', () => {
             updateDocumentInput();
@@ -418,15 +449,19 @@
         uploadForm.addEventListener('submit', async (event) => {
             event.preventDefault();
 
-            // Check if a document is selected
+            // star the animation
+            //showAnimation()
+
+             // Check if a document is selected
             if (documentInput.files.length === 0) {
                 errorMessageElement.textContent = 'Please select a document to upload.';
                 errorMessageElement.style.display = 'block';
                 return; // Stop further processing
             }
 
-            // Clear any previous error messages
+            // Clear any previous error or success messages
             errorMessageElement.style.display = 'none';
+            successMessageElement.style.display = 'none';
 
             const selectedUid = documentInput.dataset.uid;
             const selectedEmail = documentInput.dataset.email;
@@ -458,21 +493,25 @@
                 // Handle the response and UI updates
                 if (responseData.success) {
                     // Update UI or show a success message
-                    console.log(responseData.message);
                     errorMessageElement.style.display = 'none'; // Hide the error message
+                    successMessageElement.textContent =  responseData.message
                     successMessageElement.style.display = 'block'; // Show the success message
-
+                    // stop the animation
+                    hideAnimation()
                     // Clear the selected file from the input element
                     documentInput.value = '';
                 } else {
                     // Handle error
-                    console.error(responseData.message);
                     errorMessageElement.textContent = 'Please select a document to upload.';
                     errorMessageElement.style.display = 'block';
+                    // stop the animation
+                    hideAnimation()
                 }
             } catch (error) {
                 errorMessageElement.textContent = 'Please select a document to upload.';
                 errorMessageElement.style.display = 'block';
+                // stop the animation
+                hideAnimation()
             }
         });
 
@@ -480,6 +519,21 @@
             const categoryDropdown = document.getElementById('categoryDropdown');
             return categoryDropdown.value;
         }
+
+        function showAnimation() {
+            const animationContainer = document.querySelector('.animation-container');
+            const knightRiderElement = animationContainer.querySelector('.knight-rider');
+            knightRiderElement.style.animation = 'knightRider 1s infinite';
+            animationContainer.style.display = 'block';
+        }
+
+        function hideAnimation() {
+            const animationContainer = document.querySelector('.animation-container');
+            const knightRiderElement = animationContainer.querySelector('.knight-rider');
+            knightRiderElement.style.animation = 'none'; // Remove the animation
+            animationContainer.style.display = 'none';
+        }
+
     </script>
 
     <!-- Include jQuery -->
