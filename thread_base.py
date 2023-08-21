@@ -43,6 +43,7 @@ class Worker(StoppableThread):
     def run(self):
         error_msg = None
         raise_exception = False
+        stopped = False
         while not self.terminate_condition:
             func, args, kwargs = self.tasks.get()
             try:
@@ -54,9 +55,13 @@ class Worker(StoppableThread):
             finally:
                 self.task_counter.set_task_counter()
                 self.stop()
+                stopped = True
                 break
         if raise_exception:
             raise RuntimeError(error_msg)
+
+        if not stopped:
+            self.stop()
 
 
 class TaskCounter(object):

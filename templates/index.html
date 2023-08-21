@@ -107,7 +107,7 @@
     .animation-container {
         display: none;
         width: 100%;
-        height: 5px; /* Set the desired height for the animation */
+        height: 25px; /* Set the desired height for the animation */
         background-color: #f0f0f0; /* Background color of the animation container */
         overflow: hidden;
     }
@@ -295,7 +295,7 @@
                             <form method="POST" onsubmit="updateUserStatus('{{ user.uid }}', 'toggle_disable'); return false;">
                                 <input type="hidden" name="uid" value="{{ user.uid }}">
                                 <input type="hidden" name="action" value="toggle_disable">
-                                <button type="submit" class="btn btn-{{ 'danger' if user.disabled else 'success' }} btn-sm">
+                                <button id="statusButton-{{ user.uid }}" type="submit" class="btn btn-{{ 'danger' if user.disabled else 'success' }} btn-sm">
                                     {{ 'Enable' if user.disabled else 'Disable' }}
                                 </button>
                             </form>
@@ -333,6 +333,11 @@
                     // Reload the Manage Users table or update the relevant parts
                     if (data.user) {
                         updateTableRow(data.user, "UpdateUserStatus");
+                        // Update the button text after the status is toggled
+                        const statusButton = document.getElementById(`statusButton-${data.user.uid}`);
+                        statusButton.textContent = data.user.disabled ? 'Enable' : 'Disable';
+                        statusButton.classList.remove('btn-danger', 'btn-success');
+                        statusButton.classList.add(data.user.disabled ? 'btn-danger' : 'btn-success');
                     }
                 } else {
                     // Handle error
@@ -395,13 +400,24 @@
     <script>
         // Check if the error message is present in the session
         const errorMessage = "{{ session.get('error_message', "") }}";
+        const successMessage = "{{ session.get('success_message', "") }}";
+        const errorMessageId = document.getElementById('error-message');
+        const successMessageId = document.getElementById('success-message');
         if (errorMessage != "") {
-            const errorMessageId = document.getElementById('error-message');
+            successMessageId.style.display = 'none';
             errorMessageId.textContent = errorMessage;
             errorMessageId.style.display = 'block';
 
             // Clear the error message from the session
             fetch('/clear_error_message', { method: 'POST' });
+        }
+        if (successMessage != "") {
+            errorMessageId.style.display = 'none';
+            successMessageId.textContent = successMessage;
+            successMessageId.style.display = 'block';
+
+            // Clear the error message from the session
+            fetch('/clear_success_message', { method: 'POST' });
         }
     </script>
     <script>
@@ -522,8 +538,8 @@
 
              // Check if a document is selected
             if (documentInput.files.length === 0) {
-                errorMessageElement.textContent = 'Please select a document to upload.';
-                errorMessageElement.style.display = 'block';
+                //errorMessageElement.textContent = 'Please select a document to upload.';
+                //errorMessageElement.style.display = 'block';
                 return; // Stop further processing
             }
 
@@ -563,15 +579,16 @@
                 formData.append('documents', file);
             }
 
+            let response;
             try {
                 // Perform the document upload using fetch
                 if (areAnyCheckboxesChecked()) {
-                    const response = await fetch('/handle_selection_specific', {
+                    response = await fetch('/handle_selection_specific', {
                         method: 'POST',
                         body: formData
                     });
                 } else {
-                    const response = await fetch('/handle_selection', {
+                    response = await fetch('/handle_selection', {
                         method: 'POST',
                         body: formData
                     });
@@ -591,13 +608,13 @@
                     documentInput.value = '';
                 } else {
                     // Handle error
-                    errorMessageElement.textContent = 'Please select a document to upload.';
+                    errorMessageElement.textContent = responseData.message;
                     errorMessageElement.style.display = 'block';
                     // stop the animation
                     hideAnimation()
                 }
             } catch (error) {
-                errorMessageElement.textContent = 'Please select a document to upload.';
+                errorMessageElement.textContent = error;
                 errorMessageElement.style.display = 'block';
                 // stop the animation
                 hideAnimation()

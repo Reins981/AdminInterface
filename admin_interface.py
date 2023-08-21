@@ -1,3 +1,6 @@
+import threading
+from flask_mail import Mail, Message
+from init_secret import generate_token
 from flask import (
     Flask,
     render_template,
@@ -6,7 +9,9 @@ from flask import (
     url_for,
     session,
     jsonify,
-    Response
+    send_from_directory,
+    flash,
+    render_template_string
 )
 import firebase_admin
 from functools import wraps
@@ -14,7 +19,6 @@ import os
 import re
 import requests
 import shutil
-import asyncio
 from firebase_admin import (
     credentials,
     auth,
@@ -25,10 +29,21 @@ from utils import (
     upload_document,
     CRED
 )
-from thread_base import Worker, ThreadPool, TaskCounter
+from thread_base import ThreadPool, TaskCounter
+from mail_template import create_mail_template
 
 app = Flask(__name__, static_folder='images')
 app.secret_key = 'tz957fpzG0Pib5GPFd1rdv82v1abxbrZX9btUAL_dpI'
+# Set up the SendGrid API client
+app.config['MAIL_SERVER'] = 'smtp.sendgrid.net'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'apikey'
+# app.config['MAIL_PASSWORD'] = os.environ.get('SENDGRID_API_KEY')
+app.config['MAIL_PASSWORD'] = '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'
+# app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
+app.config['MAIL_DEFAULT_SENDER'] = "default2402@gmail.com"
+mail = Mail(app)
 
 # Define a temporary folder for storing uploaded files
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "temporary_upload")
@@ -51,6 +66,10 @@ def requires_admin_role():
 
     user_role = session['role']
     return user_role == 'admin'
+
+
+def dummy_task():
+    pass
 
 
 @app.before_request
@@ -97,11 +116,16 @@ def login():
                 user_data = response.json()
 
                 role = user.custom_claims.get('role', None)
+                verified = user.custom_claims.get('verified', None)
                 if role and role == 'admin':
-                    session['user_id'] = user.uid
-                    session['display_name'] = user.display_name
-                    session['role'] = role
-                    return redirect(url_for('index'))
+                    if verified:
+                        session['user_id'] = user.uid
+                        session['display_name'] = user.display_name
+                        session['role'] = role
+                        return redirect(url_for('index'))
+                    else:
+                        error_message = f"User {user.display_name} is not verified!"
+                        return render_template('login.html', error_message=error_message)
                 else:
                     error_message = "Only admin users are authorized to log in."
                     return render_template('login.html', error_message=error_message)
@@ -137,12 +161,114 @@ def index():
     return render_template('index.html', users=users)
 
 
+@app.route('/logo/<path:filename>')
+@login_required
+def logo(filename):
+    return send_from_directory('images', filename)
+
+
 @app.route('/clear_error_message', methods=['POST'])
 @login_required
 def clear_error_message():
     if 'error_message' in session:
         session.pop('error_message')
     return ''
+
+
+@app.route('/clear_success_message', methods=['POST'])
+@login_required
+def clear_success_message():
+    if 'success_message' in session:
+        session.pop('success_message')
+    return ''
+
+
+# Endpoint for sending verification email
+@app.route('/send_verification_email', methods=['GET'])
+@login_required
+def send_verification_email():
+    error = False
+    user = None
+    try:
+        email = request.args.get('email')
+
+        # Generate a random verification token
+        verification_token = generate_token()
+
+        user = auth.get_user_by_email(email)
+        current_custom_claims = user.custom_claims
+        if current_custom_claims and 'verification_token' in current_custom_claims:
+            current_custom_claims['verification_token'] = verification_token
+            auth.set_custom_user_claims(user.uid, current_custom_claims)
+
+            # Include the verification token as a parameter in the link
+            verification_link = url_for('verify_email',
+                                        token=verification_token,
+                                        email=email,
+                                        _external=True)
+            # Send email with verification_link to the user's email address
+            print(verification_link)
+            # Render and send the email using Flask's render_template_string function
+            logo_url = url_for('logo', filename='images/logo.png', _external=True)
+            subject, html_content = create_mail_template(verification_link, logo_url)
+            rendered_html = render_template_string(html_content)
+
+            msg = Message(subject, recipients=[email])
+            msg.html = rendered_html
+            # Send the email
+            try:
+                mail.send(msg)
+                message = (f'User `{user.display_name}` created. '
+                           f'Verification email sent successfully')
+                print(message)
+                session['success_message'] = message
+            except Exception as e:
+                error = True
+                # Store the error message in the session
+                session['error_message'] = str(e)
+    except Exception as e:
+        error = True
+        # Store the error message in the session
+        session['error_message'] = str(e)
+
+    # Make sure the user is deleted in case email sending fails due to various reasons
+    if error and user:
+        delete_user(user.uid)
+
+    return redirect(url_for('index'))
+
+
+# Endpoint for verifying email
+@app.route('/verify_email/<token>')
+@login_required
+def verify_email(token):
+    error = False
+    try:
+        email = request.args.get('email')
+        user = auth.get_user_by_email(email)
+        current_custom_claims = user.custom_claims
+
+        if current_custom_claims and 'verification_token' in current_custom_claims:
+            if current_custom_claims['verification_token'] == token:
+                current_custom_claims['verified'] = True
+                # update user's custom claims to change the verified status
+                auth.set_custom_user_claims(user.uid, current_custom_claims)
+                message = f'Email verified! User `{user.display_name}` can now log in.'
+            else:
+                error_message = f'Invalid verification token for user {user.uid}.'
+                message = error_message
+                error = True
+        else:
+            error_message = f'No verification token set for user {user.uid}.'
+            message = error_message
+            error = True
+    except Exception as e:
+        # Store the error message in the session
+        message = str(e)
+        error = True
+
+    return render_template('login.html', success_message=message) if not error else (
+        render_template('login.html', error_message=message))
 
 
 @app.route('/create_user', methods=['POST'])
@@ -170,10 +296,13 @@ def create_user():
         auth.set_custom_user_claims(user.uid, {
             'role': role,
             'domain': domain,
-            "disabled": user.disabled
+            "disabled": user.disabled,
+            "verified": False,
+            "verification_token": None
         })
 
-        return redirect(url_for('index'))
+        # Send verification email to the user
+        return redirect(url_for('send_verification_email', email=email))
     except Exception as e:
         # Store the error message in the session
         session['error_message'] = str(e)
@@ -375,7 +504,7 @@ def handle_selection():
     if status != 'success':
         response_data['success'] = False
         response_data['message'] = status
-        return response_data
+        return jsonify(response_data)
 
     # Calculate total size first
     total_file_size = 0
@@ -389,7 +518,9 @@ def handle_selection():
 
     task_counter = TaskCounter()
     thread_counter = len(upload_files)
+    terminate_event = threading.Event()
     pool = ThreadPool(num_threads=len(upload_files),
+                      terminate_condition=terminate_event,
                       task_counter=task_counter)
     print(f"Starting in total {thread_counter} Worker Threads")
 
@@ -444,7 +575,7 @@ def handle_selection_specific():
     if status != 'success':
         response_data['success'] = False
         response_data['message'] = status
-        return response_data
+        return jsonify(response_data)
 
     # Calculate total size first
     total_file_size = 0
@@ -458,11 +589,14 @@ def handle_selection_specific():
 
     task_counter = TaskCounter()
     thread_counter = len(upload_files) * len(selected_uids)
+    terminate_event = threading.Event()
     pool = ThreadPool(num_threads=len(upload_files) * len(selected_uids),
+                      terminate_condition=terminate_event,
                       task_counter=task_counter)
     print(f"Starting in total {thread_counter} Worker Threads")
 
     category = request.form['selected_category']
+    error = False
     for upload_file in upload_files:
         document_name = upload_file.filename
 
@@ -472,6 +606,15 @@ def handle_selection_specific():
         for i, selected_user_uid in enumerate(selected_uids):
             selected_email = selected_emails[i]
             selected_domain = selected_domains[i]
+
+            if selected_user_uid == 'undefined' or selected_email == 'undefined':
+                response_data['success'] = False
+                response_data['message'] = ("No document(s) selected.\n "
+                                            "Press the `Browse` button for selection")
+                error = True
+                # Break the inner loop...
+                break
+
             # Schedule the upload to happen after a short delay
             print(f"Handle file upload for user {selected_user_uid}/{selected_email}")
             try:
@@ -489,9 +632,22 @@ def handle_selection_specific():
                     'success': False,
                     "message": str(e)
                 }
-                return jsonify(response_data)
+                error = True
+                # Break the inner loop...
+                break
+        else:
+            # Continue if the inner loop wasn't broken.
+            continue
+        # Inner loop was broken, break the outer.
+        break
 
-    pool.wait_completion()
+    if error:
+        pool.terminate_condition.set()
+        for _ in range(thread_counter):
+            print(f"Executing dummy task..")
+            pool.add_task(dummy_task)
+    else:
+        pool.wait_completion()
 
     return jsonify(response_data)
 

@@ -14,6 +14,11 @@
                 {{ error_message }}
             </div>
             {% endif %}
+            {% if success_message %}
+            <div class="alert alert-success" role="alert">
+                {{ success_message }}
+            </div>
+            {% endif %}
             <form method="POST" action="/login">
                 <div class="form-group">
                     <label for="email">Email:</label>
