@@ -451,11 +451,23 @@
             });
         });
 
+        function areAnyCheckboxesChecked() {
+            const checkboxes = document.querySelectorAll('.user-checkbox');
+
+            for (const checkbox of checkboxes) {
+                if (checkbox.checked) {
+                    return true; // At least one checkbox is checked
+                }
+            }
+
+            return false; // No checkboxes are checked
+        }
 
         function updateDocumentInputSelection() {
             const selectedUids = [];
             const selectedEmails = [];
             const selectedDomains = [];
+            let selectedEmailsText;
 
             userCheckboxes.forEach(checkbox => {
                 if (checkbox.checked) {
@@ -469,7 +481,17 @@
                 }
             });
 
-            const selectedEmailsText = selectedEmails.join(', ');
+            if (areAnyCheckboxesChecked()) {
+                userDropdown.disabled = true;
+            } else {
+                userDropdown.disabled = false;
+            }
+
+            if (selectAllUsersCheckbox.checked) {
+                selectedEmailsText = "all users";
+            } else {
+                selectedEmailsText = selectedEmails.join(', ');
+            }
 
             documentInput.labels[0].textContent = `Choose file(s) for ${selectedEmailsText}`;
             documentInput.dataset.uids = selectedUids.join(',');
@@ -498,9 +520,6 @@
         uploadForm.addEventListener('submit', async (event) => {
             event.preventDefault();
 
-            // star the animation
-            showAnimation()
-
              // Check if a document is selected
             if (documentInput.files.length === 0) {
                 errorMessageElement.textContent = 'Please select a document to upload.';
@@ -512,15 +531,29 @@
             errorMessageElement.style.display = 'none';
             successMessageElement.style.display = 'none';
 
-            const selectedUid = documentInput.dataset.uid;
-            const selectedEmail = documentInput.dataset.email;
-            const selectedDomain = documentInput.dataset.domain;
-
-            // Include the selected UID in the form data
+            // Include the selected UIDs in the form data
             const formData = new FormData(uploadForm);
-            formData.append('user_dropdown', selectedUid);
-            formData.append('selected_email', selectedEmail);
-            formData.append('selected_domain', selectedDomain);
+
+            // star the animation
+            showAnimation()
+
+            if (areAnyCheckboxesChecked()) {
+                const selectedUids = documentInput.dataset.uids;
+                const selectedEmails = documentInput.dataset.emails;
+                const selectedDomains = documentInput.dataset.domains;
+
+                formData.append('user_dropdown', selectedUids);
+                formData.append('selected_email', selectedEmails);
+                formData.append('selected_domain', selectedDomains);
+            } else {
+                const selectedUid = documentInput.dataset.uid;
+                const selectedEmail = documentInput.dataset.email;
+                const selectedDomain = documentInput.dataset.domain;
+
+                formData.append('user_dropdown', selectedUid);
+                formData.append('selected_email', selectedEmail);
+                formData.append('selected_domain', selectedDomain);
+            }
             // Add the category
             const selectedCategory = getSelectedCategory();
             formData.append('selected_category', selectedCategory);
@@ -532,10 +565,17 @@
 
             try {
                 // Perform the document upload using fetch
-                const response = await fetch('/handle_selection', {
-                    method: 'POST',
-                    body: formData
-                });
+                if (areAnyCheckboxesChecked()) {
+                    const response = await fetch('/handle_selection_specific', {
+                        method: 'POST',
+                        body: formData
+                    });
+                } else {
+                    const response = await fetch('/handle_selection', {
+                        method: 'POST',
+                        body: formData
+                    });
+                }
 
                 const responseData = await response.json();
 
@@ -570,7 +610,6 @@
         }
 
         function showAnimation() {
-            console.log("Animation start")
             const animationContainer = document.querySelector('.animation-container');
             const knightRiderElement = animationContainer.querySelector('.knight-rider');
             knightRiderElement.style.animation = 'knightRider 1s infinite';
@@ -578,7 +617,6 @@
         }
 
         function hideAnimation() {
-            console.log("Animation stop")
             const animationContainer = document.querySelector('.animation-container');
             const knightRiderElement = animationContainer.querySelector('.knight-rider');
             knightRiderElement.style.animation = 'none'; // Remove the animation

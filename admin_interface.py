@@ -280,6 +280,7 @@ def delete_user(uid):
         return redirect(url_for('index'))
 
 
+@login_required
 def current_user_domain(session_lookup=True, current_user=None):
     if session_lookup:
         # Get the current user's UID
@@ -291,6 +292,7 @@ def current_user_domain(session_lookup=True, current_user=None):
     return custom_claims.get('domain', None)
 
 
+@login_required
 def sort_users(users_by_domain: dict):
     # Sort users within each domain
     for domain, domain_users in users_by_domain.items():
@@ -300,6 +302,7 @@ def sort_users(users_by_domain: dict):
     return [user for domain_users in users_by_domain.values() for user in domain_users]
 
 
+@login_required
 def fetch_users_by_domain(domain):
     try:
         user_records = auth.list_users().users
@@ -335,15 +338,6 @@ def fetch_users_by_domain(domain):
         # Store the error message in the session
         session['error_message'] = str(e)
         return redirect(url_for('index'))
-
-
-@app.route('/clear_session', methods=['GET'])
-def clear_session():
-    if 'total_file_size' in session:
-        session.pop('total_file_size')
-        return jsonify({'success': True})
-    else:
-        return jsonify({'success': False})
 
 
 @login_required
@@ -391,15 +385,19 @@ def handle_selection():
         upload_file.save(temp_file_path)
         total_file_size += os.path.getsize(temp_file_path)
 
+    print(f"Uploading in total {total_file_size} bytes")
+
     task_counter = TaskCounter()
+    thread_counter = len(upload_files)
     pool = ThreadPool(num_threads=len(upload_files),
                       task_counter=task_counter)
+    print(f"Starting in total {thread_counter} Worker Threads")
+
+    category = request.form['selected_category']
     for upload_file in upload_files:
         document_name = upload_file.filename
-        category = request.form['selected_category']
-        # Return a JSON response indicating success
 
-        # Save the upload file to the temporary folder
+        # Upload file to the temporary folder
         temp_file_path = os.path.join(app.config["UPLOAD_FOLDER"], document_name)
 
         # Schedule the upload to happen after a short delay
@@ -419,6 +417,79 @@ def handle_selection():
                 "message": str(e)
             }
             return jsonify(response_data)
+
+    pool.wait_completion()
+
+    return jsonify(response_data)
+
+
+@app.route('/handle_selection_specific', methods=['POST'])
+@login_required
+def handle_selection_specific():
+    # Create a reference to the Firestore database
+    db = firestore.client()
+    selected_uids = request.form.get('user_dropdown').split(',')
+    selected_emails = request.form['selected_email'].split(',')
+    selected_domains = request.form['selected_domain'].split(',')
+
+    response_data = {
+        'success': True,
+        'message': 'Document(s) uploaded successfully'
+    }
+
+    upload_files = request.files.getlist('documents')
+
+    # First clean the temo dir
+    status = clean_directory(app.config["UPLOAD_FOLDER"])
+    if status != 'success':
+        response_data['success'] = False
+        response_data['message'] = status
+        return response_data
+
+    # Calculate total size first
+    total_file_size = 0
+    for upload_file in upload_files:
+        document_name = upload_file.filename
+        temp_file_path = os.path.join(app.config["UPLOAD_FOLDER"], document_name)
+        upload_file.save(temp_file_path)
+        total_file_size += os.path.getsize(temp_file_path)
+
+    print(f"Uploading in total {total_file_size} bytes")
+
+    task_counter = TaskCounter()
+    thread_counter = len(upload_files) * len(selected_uids)
+    pool = ThreadPool(num_threads=len(upload_files) * len(selected_uids),
+                      task_counter=task_counter)
+    print(f"Starting in total {thread_counter} Worker Threads")
+
+    category = request.form['selected_category']
+    for upload_file in upload_files:
+        document_name = upload_file.filename
+
+        # Upload the file to the temporary folder
+        temp_file_path = os.path.join(app.config["UPLOAD_FOLDER"], document_name)
+
+        for i, selected_user_uid in enumerate(selected_uids):
+            selected_email = selected_emails[i]
+            selected_domain = selected_domains[i]
+            # Schedule the upload to happen after a short delay
+            print(f"Handle file upload for user {selected_user_uid}/{selected_email}")
+            try:
+                pool.add_task(
+                    upload_document,
+                    db,
+                    selected_user_uid,
+                    selected_email,
+                    selected_domain,
+                    category,
+                    temp_file_path,
+                )
+            except Exception as e:
+                response_data = {
+                    'success': False,
+                    "message": str(e)
+                }
+                return jsonify(response_data)
 
     pool.wait_completion()
 
