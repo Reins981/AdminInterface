@@ -96,13 +96,16 @@ class ThreadPool:
 
         for _ in range(self.num_threads):
             print(f"Starting Worker thread")
-            Worker(
-                self.tasks,
-                self.task_name,
-                self.task_counter,
-                self.terminate_condition,
-                self.schedule_clock
-            )
+            try:
+                Worker(
+                    self.tasks,
+                    self.task_name,
+                    self.task_counter,
+                    self.terminate_condition,
+                    self.schedule_clock
+                )
+            except Exception as e:
+                raise RuntimeError(str(e))
 
     def add_task(self, func, *args, **kwargs):
         # Add a task to the queue

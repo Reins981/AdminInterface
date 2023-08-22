@@ -127,6 +127,26 @@
             transform: translateX(100%);
         }
     }
+
+    /* Define the dot styles */
+    .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+
+    /* Style the green dot */
+    .dot-green {
+        background-color: #00ff00; /* Green color */
+    }
+
+    /* Style the red dot */
+    .dot-red {
+        background-color: #ff0000; /* Red color */
+    }
+
     </style>
 
 
@@ -162,7 +182,7 @@
                 </div>
                 <div class="form-group">
                     <label for="email">Email:</label>
-                    <input type="email" name="email" class="form-control" required>
+                    <input type="email" name="email" class="form-control" id="emailInput" required>
                 </div>
                 <div class="form-group">
                     <label for="password">Password:</label>
@@ -189,7 +209,7 @@
                 <div class="alert alert-success" id="success-message" style="display: none;">
                     Document(s) uploaded successfully!
                 </div>
-                <button type="submit" class="btn btn-primary">Create User</button>
+                <button type="submit" class="btn btn-primary" id="createUserButton">Create User</button>
             </form>
         </div>
 
@@ -204,7 +224,7 @@
 
             <!-- Upload Document Form -->
             <form id="uploadForm" method="POST" action="/handle_selection" enctype="multipart/form-data">
-                <div class="input-group mb-3">
+                <div class="input-group mb-3 align-items-center">
                     <select id="userDropdown" class="form-control">
                         {% for user in users %}
                         <option value="{{ user.uid }}">{{ user.email }}</option>
@@ -220,6 +240,10 @@
                     </div>
                     <div class="input-group-append">
                         <button type="submit" class="btn btn-primary">Upload</button>
+                    </div>
+                    <!-- Add a button to navigate to document history -->
+                    <div class="input-group-append">
+                        <a href="{{ url_for('document_history') }}" class="btn btn-primary ml-2">View Document History</a>
                     </div>
                 </div>
                 <!-- Container for the animation -->
@@ -239,6 +263,7 @@
             <table class="table">
                 <thead>
                     <tr>
+                        <th>Verified</th>
                         <th>Disabled</th>
                         <th>Name</th>
                         <th>Email</th>
@@ -252,12 +277,24 @@
                 <tbody>
                     {% for user in users %}
                     <tr data-uid="{{ user.uid }}" data-custom-claims="{{ user.custom_claims['domain'] }}">
+                        <td class="verified-cell">
+                            <!-- Display the verified status -->
+                            {% if user.custom_claims and 'verified' in user.custom_claims %}
+                                {% if user.custom_claims['verified'] %}
+                                    <span class="dot dot-green"></span>
+                                {% else %}
+                                    <span class="dot dot-red"></span>
+                                {% endif %}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
                         <td class="disabled-cell">
                             <!-- Display the disabled status -->
                             {% if user.disabled %}
-                            Yes
+                                Yes
                             {% else %}
-                            No
+                                No
                             {% endif %}
                         </td>
                         <td>{{ user.display_name }}</td>
@@ -648,7 +685,6 @@
             });
         });
     </script>
-
 
     <!-- Include jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

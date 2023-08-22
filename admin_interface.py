@@ -1,6 +1,8 @@
 import threading
+import datetime
 from flask_mail import Mail, Message
 from init_secret import generate_token
+from validate_email_address import validate_email
 from flask import (
     Flask,
     render_template,
@@ -10,7 +12,6 @@ from flask import (
     session,
     jsonify,
     send_from_directory,
-    flash,
     render_template_string
 )
 import firebase_admin
@@ -27,7 +28,8 @@ from firebase_admin import (
 from utils import (
     get_url_for_firebase_auth,
     upload_document,
-    CRED
+    CRED,
+    Domains
 )
 from thread_base import ThreadPool, TaskCounter
 from mail_template import create_mail_template
@@ -40,7 +42,8 @@ app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = 'apikey'
 # app.config['MAIL_PASSWORD'] = os.environ.get('SENDGRID_API_KEY')
-app.config['MAIL_PASSWORD'] = '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'
+app.config[
+    'MAIL_PASSWORD'] = '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'
 # app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
 app.config['MAIL_DEFAULT_SENDER'] = "default2402@gmail.com"
 mail = Mail(app)
@@ -56,8 +59,11 @@ if not os.path.exists(UPLOAD_FOLDER):
 # Initialize Firebase Admin SDK
 cred = credentials.Certificate(CRED)
 firebase_admin.initialize_app(cred, {
-            'storageBucket': 'documentmanagement-f7ce9.appspot.com'
-        })
+    'storageBucket': 'documentmanagement-f7ce9.appspot.com'
+})
+
+# Create a Firestore client instance
+db = firestore.client()
 
 
 def requires_admin_role():
@@ -85,7 +91,13 @@ def login_required(f):
         if 'user_id' not in session:
             return redirect(url_for('login'))  # Redirect to login if not authenticated
         return f(*args, **kwargs)
+
     return decorated_function
+
+
+@login_required
+def is_valid_email(email):
+    return validate_email(email)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -117,11 +129,13 @@ def login():
 
                 role = user.custom_claims.get('role', None)
                 verified = user.custom_claims.get('verified', None)
+                admin_domain = user.custom_claims.get('domain', None)
                 if role and role == 'admin':
                     if verified:
                         session['user_id'] = user.uid
                         session['display_name'] = user.display_name
                         session['role'] = role
+                        session['admin_domain'] = admin_domain
                         return redirect(url_for('index'))
                     else:
                         error_message = f"User {user.display_name} is not verified!"
@@ -161,6 +175,75 @@ def index():
     return render_template('index.html', users=users)
 
 
+@app.route('/document_history')
+@login_required
+def document_history():
+    try:
+        admin_domain = session.get('admin_domain', None)
+        if not admin_domain:
+            return render_template('history.html', error_message="Admin domain not found")
+
+        final_documents = []
+        # Use a set to keep track of unique document names
+        unique_document_names = set()
+
+        if admin_domain == Domains.ALL.value:
+            # Get a list of all collections
+            collections = [col.id for col in db.collections()]
+            for collection in collections:
+                documents_ref = db.collection(collection)
+                query_snapshot = documents_ref.get()
+                # Loop through the query results and add documents to the list
+                for document in query_snapshot:
+                    document_data = document.to_dict()
+                    print(document_data)
+                    document_name = document_data['document_name']
+                    print(document_name)
+
+                    if document_name not in unique_document_names:
+                        final_documents.append(document_data)
+                        unique_document_names.add(document_name)
+        else:
+            documents_ref = db.collection("_".join(("documents", admin_domain.lower())))
+            query_snapshot = documents_ref.get()
+            # Loop through the query results and add documents to the list
+            for document in query_snapshot:
+                document_data = document.to_dict()
+                document_name = document_data['document_name']
+
+                if document_name not in unique_document_names:
+                    final_documents.append(document_data)
+                    unique_document_names.add(document_name)
+
+        print("finalllllllll")
+        print(final_documents)
+        # Render the history.html template with the retrieved documents
+        return render_template('history.html', documents=final_documents)
+    except Exception as e:
+        # Handle errors appropriately
+        error_message = str(e)
+        return render_template('history.html', error_message=error_message)
+
+
+# ... Other routes and app configuration ...
+
+
+@app.route('/delete_document/<document_id>', methods=['DELETE'])
+@login_required
+def delete_document(document_id):
+    try:
+        # Delete the document with the given document_id
+        # You will need to implement this deletion logic based on your database structure
+
+        # Return a success response if the document is deleted
+        response = {'success': True}
+    except Exception as e:
+        # Handle errors appropriately
+        response = {'success': False, 'error': str(e)}
+
+    return jsonify(response)
+
+
 @app.route('/logo/<path:filename>')
 @login_required
 def logo(filename):
@@ -195,10 +278,14 @@ def send_verification_email():
         # Generate a random verification token
         verification_token = generate_token()
 
+        # Calculate the expiration timestamp (e.g., 24 hours from now)
+        expiration_time = datetime.datetime.now() + datetime.timedelta(hours=1)
+
         user = auth.get_user_by_email(email)
         current_custom_claims = user.custom_claims
         if current_custom_claims and 'verification_token' in current_custom_claims:
             current_custom_claims['verification_token'] = verification_token
+            current_custom_claims['verification_token_expiration'] = expiration_time.timestamp()
             auth.set_custom_user_claims(user.uid, current_custom_claims)
 
             # Include the verification token as a parameter in the link
@@ -243,29 +330,44 @@ def send_verification_email():
 @login_required
 def verify_email(token):
     error = False
+    user = None
     try:
         email = request.args.get('email')
         user = auth.get_user_by_email(email)
         current_custom_claims = user.custom_claims
-
         if current_custom_claims and 'verification_token' in current_custom_claims:
-            if current_custom_claims['verification_token'] == token:
-                current_custom_claims['verified'] = True
-                # update user's custom claims to change the verified status
-                auth.set_custom_user_claims(user.uid, current_custom_claims)
-                message = f'Email verified! User `{user.display_name}` can now log in.'
+            token_expiration = current_custom_claims.get('verification_token_expiration')
+            if token_expiration and token_expiration > datetime.datetime.now().timestamp():
+                if current_custom_claims['verification_token'] == token:
+                    current_custom_claims['verified'] = True
+                    # update user's custom claims to change the verified status
+                    auth.set_custom_user_claims(user.uid, current_custom_claims)
+                    message = f'Email verified! User `{user.display_name}` can now log in.'
+                else:
+                    error_message = f'Invalid verification token for user {user.uid}.'
+                    message = error_message
+                    error = True
+                    # Make sure to delete the user from the database
+                    delete_user(user.uid)
             else:
-                error_message = f'Invalid verification token for user {user.uid}.'
+                error_message = f'Verification token has expired for user {user.uid}.'
                 message = error_message
                 error = True
+                # Make sure to delete the user from the database
+                delete_user(user.uid)
         else:
             error_message = f'No verification token set for user {user.uid}.'
             message = error_message
             error = True
+            # Make sure to delete the user from the database
+            delete_user(user.uid)
     except Exception as e:
         # Store the error message in the session
         message = str(e)
         error = True
+        # Make sure to delete the user from the database
+        if user:
+            delete_user(user.uid)
 
     return render_template('login.html', success_message=message) if not error else (
         render_template('login.html', error_message=message))
@@ -279,6 +381,11 @@ def create_user():
     password = request.form['password']
     role = request.form['role']
     domain = request.form['domain']
+
+    if not is_valid_email(email):
+        error_message = "Invalid email address format"
+        session['error_message'] = error_message
+        return redirect(url_for('index'))
 
     # Check if password meets the criteria
     if len(password) < 8 or not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):

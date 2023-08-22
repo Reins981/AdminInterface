@@ -7,6 +7,14 @@ from firebase_admin import (
 )
 from datetime import datetime
 from threading import current_thread
+from enum import Enum
+
+
+class Domains(Enum):
+    PDC = "BACQROO-PDC"
+    MEX = "BACQROO-MEX"
+    ALL = "BACQROO-ALL"
+
 
 BASE_PATH_SA = os.path.join(
     os.path.abspath(os.path.dirname(__file__)),
@@ -86,6 +94,7 @@ def upload_document(db, user_id, user_email, user_domain, category, file_path):
 
                     new_document = {
                         "user_name": user_name,
+                        "user_email": user_email,
                         "owner": user_id,
                         "category": category,
                         "user_domain": user_domain,
