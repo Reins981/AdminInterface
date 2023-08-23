@@ -112,6 +112,23 @@
 <body>
     <div class="container">
         <h1>Document History</h1>
+        <!-- Add the search bar -->
+        <div class="input-group mb-3">
+            <input type="text" class="form-control" id="search-input" placeholder="Search by document name or user email or year or category">
+            <div class="input-group-append">
+                <button class="btn btn-primary" type="button" id="search-button">Search</button>
+            </div>
+        </div>
+        <div class="input-group mb-3">
+            <input type="text" class="form-control" id="search-input-strict" placeholder="Search by user email and category and year">
+            <div class="input-group-append">
+                <button class="btn btn-primary" type="button" id="search-button-strict">Search</button>
+            </div>
+        </div>
+        <div class="alert alert-info" id="search-results" style="display: none;">
+            Search results will appear here.
+        </div>
+        <!-- Display documents history here -->
         <!-- Display documents history here -->
         <div class="alert alert-danger" id="error-message" style="display: none;">
             {{ error_message }}
@@ -149,16 +166,15 @@
                                         {% set _ = documents_by_user[user_email].append(document) %}
                                     {% endfor %}
                                     {% for user_email, user_documents in documents_by_user.items() %}
-                                    <li class="user-email">
-                                        <span>User: {{ user_email }}</span>
+                                    <li class="user-email">{{ user_email }}
                                         <ul>
                                             {% for document in user_documents %}
                                             <li class="document-row" data-document-id="{{ document.document_id }}" data-new="{{ document.is_new }}">
-                                                <span>Document:</span>
+                                                <span class="document-text">Document:</span>
                                                 <ul>
-                                                    <li>{{ document.document_name }}
-                                                        <br><span style="margin-left: 20px;">Last Update: {{ document.last_update }}</span>
-                                                        <br><span style="margin-left: 20px;">New Document: {{ document.is_new }}</span>
+                                                    <li class="document-name">{{ document.document_name }}
+                                                        <br><span style="margin-left: 20px;" class="last-update">Last Update: {{ document.last_update }}</span>
+                                                        <br><span style="margin-left: 20px;" class="new-document">New Document: {{ document.is_new }}</span>
                                                     </li>
                                                 </ul>
                                                 <button class="btn btn-danger"
@@ -205,6 +221,83 @@
                 event.stopPropagation(); // Prevent event propagation
                 $(this).toggleClass('opened');
             });
+
+            // Input event listener for search input
+            $('#search-input').on('input', function() {
+                $('#search-results').slideUp(); // Slide up search results box
+            });
+
+            // Click event listener for search button
+            $('#search-button').click(function() {
+                const searchQuery = $('#search-input').val().trim().toLowerCase();
+                performSearch(searchQuery); // Perform the search
+            });
+            // Click event listener for search button
+            $('#search-button-strict').click(function() {
+                const searchQuery = $('#search-input-strict').val().trim().toLowerCase();
+                const searchKeywords = searchQuery.split(/[, ]+/); // Split by commas and spaces
+                performSearchStrict(searchKeywords); // Perform the search
+            });
+
+            function performSearch(query) {
+                const results = [];
+
+                // Loop through each document row
+                $('.document-row').each(function() {
+                    const documentName = $(this).find('.document-name').text().trim().toLowerCase();
+                    const userEmail = $(this).closest('.user-email').text().trim().toLowerCase(); // Updated line
+                    const documentYear = $(this).closest('.year').find('span').text().trim().toLowerCase(); // New line
+                    const documentCategory = $(this).closest('.category').text().trim().toLowerCase(); // New line
+
+
+                    // Check if query matches document name or user email
+                    if (documentName.includes(query) || userEmail.includes(query) || documentYear.includes(query) || documentCategory.includes(query)) {
+                        results.push($(this).prop('outerHTML')); // Add matching row HTML to results
+                    }
+                });
+
+                // Update search results container
+                const searchResultsContainer = $('#search-results');
+                if (results.length > 0) {
+                    searchResultsContainer.html(results.join(''));
+                    searchResultsContainer.slideDown(); // Slide down search results box
+                } else {
+                    searchResultsContainer.html('<p>No matching documents found.</p>');
+                    searchResultsContainer.slideDown(); // Slide down search results box
+                }
+            }
+            function performSearchStrict(searchKeywords) {
+                const results = [];
+
+                if (searchKeywords.length < 3) {
+                    errorMessageElement.textContent = "Search keyword must have 3 arguments (mail category year)";
+                    errorMessageElement.style.display = 'block';
+                    successMessageElement.style.display = 'none';
+                }
+
+                // Loop through each document row
+                $('.document-row').each(function() {
+                    const userEmail = $(this).closest('.user-email').text().trim().toLowerCase(); // Updated line
+                    const documentYear = $(this).closest('.year').find('span').text().trim().toLowerCase(); // New line
+                    const documentCategory = $(this).closest('.category').text().trim().toLowerCase(); // New line
+
+
+                    // Check if query matches document name or user email
+                    if (userEmail.includes(searchKeywords[0]) && documentCategory.includes(searchKeywords[1]) && documentYear.includes(searchKeywords[2])) {
+                        results.push($(this).prop('outerHTML')); // Add matching row HTML to results
+                    }
+                });
+
+                // Update search results container
+                const searchResultsContainer = $('#search-results');
+                if (results.length > 0) {
+                    searchResultsContainer.html(results.join(''));
+                    searchResultsContainer.slideDown(); // Slide down search results box
+                } else {
+                    searchResultsContainer.html('<p>No matching documents found.</p>');
+                    searchResultsContainer.slideDown(); // Slide down search results box
+                }
+            }
         });
     </script>
     <script>
