@@ -197,7 +197,6 @@ def prepare_query_snapshot(query_snapshot, domains, unique_document_names):
     # Loop through the query results and add documents to the list
     for document in query_snapshot:
         document_data = document.to_dict()
-        print(document_data)
         # Does the domain exist?
         if not is_value_present_in_dict('name',
                                         domains,
@@ -273,7 +272,6 @@ def document_history():
             # Sort each domain
             sort_domains(domains)
 
-        print(domains)
         # Render the history.html template with the retrieved documents
         return render_template('history.html', domains=domains)
     except Exception as e:
@@ -316,10 +314,11 @@ def delete_document():
                 storage_bucket = storage.bucket()
                 file_path = (f"{document_domain.lower()}/"
                              f"{document_category}/"
-                             f"{document_year}"
+                             f"{document_year}/"
                              f"{user.uid}/"
                              f"{user.display_name}/"
                              f"{document_name}")
+
                 blob = storage_bucket.blob(file_path)
                 blob.delete()
 
@@ -398,7 +397,6 @@ def send_verification_email():
                 mail.send(msg)
                 message = (f'User `{user.display_name}` created. '
                            f'Verification email sent successfully')
-                print(message)
                 session['success_message'] = message
             except Exception as e:
                 error = True

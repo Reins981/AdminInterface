@@ -239,7 +239,7 @@
                         <label class="custom-file-label" for="documentInput">Choose file(s)</label>
                     </div>
                     <div class="input-group-append">
-                        <button type="submit" class="btn btn-primary">Upload</button>
+                        <button type="submit" class="btn btn-primary" id="uploadButton">Upload</button>
                     </div>
                     <!-- Add a button to navigate to document history -->
                     <div class="input-group-append">
@@ -479,6 +479,7 @@
         const successMessageElement = document.getElementById('success-message');
         const selectAllUsersCheckbox = document.getElementById('selectAllUsers');
         const userCheckboxes = document.querySelectorAll('.user-checkbox');
+        const uploadButton = document.getElementById('uploadButton');
 
         // Trigger the change event manually on page load
         document.addEventListener('DOMContentLoaded', () => {
@@ -574,11 +575,15 @@
             event.preventDefault();
 
              // Check if a document is selected
-            if (documentInput.files.length === 0) {
-                //errorMessageElement.textContent = 'Please select a document to upload.';
-                //errorMessageElement.style.display = 'block';
+            if (documentInput.files.length == 0) {
+                errorMessageElement.textContent = 'Please select a document to upload.';
+                errorMessageElement.style.display = 'block';
                 return; // Stop further processing
             }
+
+            // Disable the buttons during upload
+            uploadButton.disabled = true;
+            documentInput.disabled = true;
 
             // Clear any previous error or success messages
             errorMessageElement.style.display = 'none';
@@ -635,6 +640,9 @@
 
                 // Handle the response and UI updates
                 if (responseData.success) {
+                    // Enable the buttons after successful upload
+                    uploadButton.disabled = false;
+                    documentInput.disabled = false;
                     // Update UI or show a success message
                     errorMessageElement.style.display = 'none'; // Hide the error message
                     successMessageElement.textContent =  responseData.message
@@ -644,6 +652,9 @@
                     // Clear the selected file from the input element
                     documentInput.value = '';
                 } else {
+                    // Enable the buttons after error
+                    uploadButton.disabled = false;
+                    documentInput.disabled = false;
                     // Handle error
                     errorMessageElement.textContent = responseData.message;
                     errorMessageElement.style.display = 'block';
@@ -651,6 +662,9 @@
                     hideAnimation()
                 }
             } catch (error) {
+                // Enable the buttons after error
+                uploadButton.disabled = false;
+                documentInput.disabled = false;
                 errorMessageElement.textContent = error;
                 errorMessageElement.style.display = 'block';
                 // stop the animation

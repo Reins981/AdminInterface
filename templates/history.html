@@ -59,6 +59,54 @@
         .document-row:hover {
             background-color: #f8f9fa;
         }
+        /* Additions for Bootstrap styling */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            padding-top: 20px;
+        }
+
+        /* Bootstrap alert classes */
+        .alert {
+            margin-top: 10px;
+        }
+
+        /* Larger and more appealing icons */
+        .tree li::before {
+            left: -12px;
+        }
+
+        /* Remove hover effect that causes the gray or white rectangle */
+        .tree li:hover {
+            background-color: initial; /* Reset background color to default */
+        }
+
+        /* Custom bullet styles */
+        .tree li::marker {
+            content: "";
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #007bff;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        /* Highlight new documents */
+        .tree li.document-row[data-new="True"] {
+            background-color: #007bff;
+            color: #ffffff; /* Text color for highlighted documents */
+        }
+
+        /* Ensure readable text on highlighted documents */
+        .tree li.document-row[data-new="True"]:hover {
+            background-color: #0056b3; /* Darker shade of blue */
+            color: #ffffff;
+        }
+
     </style>
 </head>
 <body>
@@ -105,7 +153,7 @@
                                         <span>User: {{ user_email }}</span>
                                         <ul>
                                             {% for document in user_documents %}
-                                            <li class="document-row" data-document-id="{{ document.document_id }}">
+                                            <li class="document-row" data-document-id="{{ document.document_id }}" data-new="{{ document.is_new }}">
                                                 <span>Document:</span>
                                                 <ul>
                                                     <li>{{ document.document_name }}
@@ -149,31 +197,17 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <!-- Include your custom JavaScript here -->
     <script>
+        // Your existing JavaScript
+
+        // Enhancements for Bootstrap interaction
         $(document).ready(function() {
-            $('.tree li.domain').click(function() {
-                $(this).toggleClass('opened');
-            });
-
-            $('.tree li.category').click(function() {
-                event.stopPropagation(); // Prevent event propagation
-                $(this).toggleClass('opened');
-            });
-
-            $('.tree li.year').click(function() {
-                event.stopPropagation(); // Prevent event propagation
-                $(this).toggleClass('opened');
-            });
-            $('.tree li.document-row').click(function() {
-                event.stopPropagation(); // Prevent event propagation
-                $(this).toggleClass('opened');
-            });
-            $('.tree li.user-email').click(function() {
+            $('.tree li.domain, .tree li.category, .tree li.year, .tree li.document-row, .tree li.user-email').click(function(event) {
                 event.stopPropagation(); // Prevent event propagation
                 $(this).toggleClass('opened');
             });
         });
-
-
+    </script>
+    <script>
         const errorMessageElement = document.getElementById('error-message');
         const successMessageElement = document.getElementById('success-message');
         function deleteDocument(documentId, documentName, documentYear, documentDomain, documentCategory, documentEmail) {
@@ -183,6 +217,10 @@
             // Get the table row associated with the document ID
             var tableRow = $(`.document-row[data-document-id="${documentId}"]`);
 
+            // Reset the message boxes
+            errorMessageElement.style.display = 'none';
+            successMessageElement.style.display = 'none';
+
             // Send a request to delete the document using AJAX
             $.ajax({
                 url: url,
@@ -190,7 +228,6 @@
                 success: function(response) {
                     // Handle the response, e.g., remove the row from the table
                     if (response.success) {
-                        alert('Document deleted successfully');
                         // Remove the row from the table
                         tableRow.remove();
                         successMessageElement.style.display = 'block';
