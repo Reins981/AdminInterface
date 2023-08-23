@@ -226,14 +226,19 @@
         $('#search-input').on('input', function() {
             $('#search-results').slideUp(); // Slide up search results box
         });
+        $('#search-input-strict').on('input', function() {
+            $('#search-results-strict').slideUp(); // Slide up search results box
+        });
 
         // Click event listener for search button
         $('#search-button').click(function() {
+            errorMessageElement.style.display = 'none';
             const searchQuery = $('#search-input').val().trim().toLowerCase();
             performSearch(searchQuery); // Perform the search
         });
         // Click event listener for search button
         $('#search-button-strict').click(function() {
+            errorMessageElement.style.display = 'none';
             const searchQuery = $('#search-input-strict').val().trim().toLowerCase();
             const searchKeywords = searchQuery.split(/[, ]+/); // Split by commas and spaces
             performSearchStrict(searchKeywords); // Perform the search
