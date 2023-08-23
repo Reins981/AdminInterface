@@ -35,8 +35,8 @@
         .tree li::before {
             content: '';
             position: absolute;
-            top: -10px;
-            left: -10px;
+            top: 0;
+            left: 0;
             width: 2px;
             height: 100%;
             background-color: #d1d3d4;
@@ -44,6 +44,11 @@
 
         .tree ul {
             padding-left: 20px;
+            display: none;
+        }
+
+        .tree li.opened > ul {
+            display: block;
         }
 
         .document-row {
@@ -63,18 +68,32 @@
         <div class="alert alert-danger" id="error-message" style="display: none;">
             {{ error_message }}
         </div>
+        <div class="alert alert-success" id="success-message" style="display: none;">
+            Document(s) deleted successfully!
+        </div>
         <ul class="tree">
             {% for domain in domains %}
-            <li>
-                {{ domain.name }}
+            <li class="domain">
+                {{ domain.get('name') }}
                 <ul>
-                    {% for category in domain.categories %}
-                    <li>
-                        {{ category.name }}
+                    {% for category in domain.get('categories') %}
+                    <li class="category">
+                        {{ category.get('name') }}
                         <ul>
                             {% for document in category.documents %}
+                            {% set year = document.get('year') %}
+                            {% if loop.first %}
+                            <li class="year">
+                                <span>{{ year }}</span>
+                                <ul>
+                            {% endif %}
                             <li class="document-row" data-document-id="{{ document.document_id }}">
-                                {{ document.document_name }} - {{ document.year }}
+                                <span>Documents Infos:</span>
+                                <ul>
+                                    <li>User Email: {{ document.user_email }}</li>
+                                    <li>Document Name: {{ document.document_name }}</li>
+                                    <li>Last update: {{ document.last_update }}</li>
+                                </ul>
                                 <button class="btn btn-danger"
                                     data-document-id="{{ document.document_id }}"
                                     data-document-domain="{{ domain.name }}"
@@ -89,6 +108,10 @@
                                         '{{ document.user_email }}'
                                 )">Delete</button>
                             </li>
+                            {% if loop.last %}
+                                </ul>
+                            </li>
+                            {% endif %}
                             {% endfor %}
                         </ul>
                     </li>
@@ -105,6 +128,29 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <!-- Include your custom JavaScript here -->
     <script>
+        $(document).ready(function() {
+            $('.tree li.domain').click(function() {
+                $(this).toggleClass('opened');
+            });
+
+            $('.tree li.category').click(function() {
+                event.stopPropagation(); // Prevent event propagation
+                $(this).toggleClass('opened');
+            });
+
+            $('.tree li.year').click(function() {
+                event.stopPropagation(); // Prevent event propagation
+                $(this).toggleClass('opened');
+            });
+            $('.tree li.document-row').click(function() {
+                event.stopPropagation(); // Prevent event propagation
+                $(this).toggleClass('opened');
+            });
+        });
+
+
+        const errorMessageElement = document.getElementById('error-message');
+        const successMessageElement = document.getElementById('success-message');
         function deleteDocument(documentId, documentName, documentYear, documentDomain, documentCategory, documentEmail) {
             // Construct the URL with query parameters
             var url = `/delete_document?id=${encodeURIComponent(documentId)}&name=${encodeURIComponent(documentName)}&year=${encodeURIComponent(documentYear)}&domain=${encodeURIComponent(documentDomain)}&category=${encodeURIComponent(documentCategory)}&email=${encodeURIComponent(documentEmail)}`;
@@ -122,12 +168,18 @@
                         alert('Document deleted successfully');
                         // Remove the row from the table
                         tableRow.remove();
+                        successMessageElement.style.display = 'block';
+                        errorMessageElement.style.display = 'none';
                     } else {
-                        alert(response.error);
+                        errorMessageElement.textContent = response.error;
+                        errorMessageElement.style.display = 'block';
+                        successMessageElement.style.display = 'none';
                     }
                 },
                 error: function() {
-                    alert('An error occurred while deleting the document');
+                    errorMessageElement.textContent = "Error deleting document";
+                    errorMessageElement.style.display = 'block';
+                    successMessageElement.style.display = 'none';
                 }
             });
         }
@@ -137,6 +189,14 @@
     <script>
         document.getElementById('error-message').textContent = "{{ error_message }}";
         document.getElementById('error-message').style.display = 'block';
+        document.getElementById('success-message').style.display = 'none';
+    </script>
+    {% endif %}
+    {% if success_message %}
+    <script>
+        document.getElementById('success-message').textContent = "{{ success_message }}";
+        document.getElementById('success-message').style.display = 'block';
+        document.getElementById('error-message').style.display = 'none';
     </script>
     {% endif %}
 </body>

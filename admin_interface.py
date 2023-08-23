@@ -31,7 +31,8 @@ from utils import (
     upload_document,
     CRED,
     Domains,
-    is_value_present_in_dict
+    is_value_present_in_dict,
+    get_dict_based_on_value_from_dict
 )
 from thread_base import ThreadPool, TaskCounter
 from mail_template import create_mail_template
@@ -178,6 +179,64 @@ def index():
     return render_template('index.html', users=users)
 
 
+@login_required
+def sort_domains(domains):
+    # Sort each domain
+    for domain in domains:
+        categories = domain['categories']
+        for category in categories:
+            category_docs = category['documents']
+            category_docs = sorted(category_docs,
+                                   key=lambda doc: doc.get('last_update'),
+                                   reverse=True)
+            category['documents'] = category_docs
+
+
+@login_required
+def prepare_query_snapshot(query_snapshot, domains, unique_document_names):
+    # Loop through the query results and add documents to the list
+    for document in query_snapshot:
+        document_data = document.to_dict()
+        print(document_data)
+        # Does the domain exist?
+        if not is_value_present_in_dict('name',
+                                        domains,
+                                        document_data.get('user_domain')):
+            domain = {
+                'name': document_data.get('user_domain'),
+                'categories': []
+            }
+            domains.append(domain)
+        # Does the category exist for the specified domain?
+        relevant_domain = \
+            [domain for domain in domains if
+             domain['name'] == document_data.get('user_domain')]
+        if not is_value_present_in_dict('name',
+                                        relevant_domain[0].get('categories'),
+                                        document_data.get('category')):
+            category = {
+                'name': document_data.get('category'),
+                'documents': []
+            }
+            relevant_domain[0]['categories'].append(category)
+
+        # Add the document ID to the dictionary
+        document_data['document_id'] = document.id
+        document_name = document_data['document_name']
+
+        if document_name not in unique_document_names:
+            category_dict = get_dict_based_on_value_from_dict(
+                'name',
+                relevant_domain[0]['categories'],
+                document_data.get('category')
+            )
+            if category_dict:
+                category_dict['documents'].append(document_data)
+            unique_document_names.add(document_name)
+
+    return domains
+
+
 @app.route('/document_history')
 @login_required
 def document_history():
@@ -186,77 +245,37 @@ def document_history():
         if not admin_domain:
             return render_template('history.html', error_message="Admin domain not found")
 
-        final_documents = []
         # Use a set to keep track of unique document names
         unique_document_names = set()
+        # Entry point
+        domains = list()
 
         if admin_domain == Domains.ALL.value:
             # Get a list of all collections
             collections = [col.id for col in db.collections()]
-            domains = set()
             for collection in collections:
-                domain_documents = []
                 # Clear old references
                 unique_document_names.clear()
                 documents_ref = db.collection(collection)
                 query_snapshot = documents_ref.get()
-                # Loop through the query results and add documents to the list
-                for document in query_snapshot:
-                    document_data = document.to_dict()
-                    # Does the domain exist?
-                    if document_data.get('user_domain') not in domains:
-                        domain = {
-                            'name': document_data.get('user_domain'),
-                            'categories': []
-                        }
-                        domains.add(domain)
-                    # Does the category exist for the specified domain?
-                    relevant_domain = \
-                        [domain for domain in domains if
-                         domain['name'] == document_data.get('user_domain')]
-                    if not is_value_present_in_dict('name',
-                                                    relevant_domain[0].get('categories'),
-                                                    document_data.get('category')):
-                        category = {
-                            'name': document_data.get('category'),
-                            'documents': []
-                        }
-                        relevant_domain[0]['categories'].append(category)
 
-                    # Add the document ID to the dictionary
-                    document_data['document_id'] = document.id
-                    document_name = document_data['document_name']
-
-                    if document_name not in unique_document_names:
-                        relevant_domain[0]['categories'].append(document_data)
-                        unique_document_names.add(document_name)
+                # Prepare the query snapshot and return the domains entry point
+                domains = prepare_query_snapshot(query_snapshot, domains, unique_document_names)
                 # Sort each domain
-                sorted_domain_documents = sorted(domain_documents,
-                                                 key=lambda doc: doc.get('last_update'),
-                                                 reverse=True)
-                for sorted_domain_document in sorted_domain_documents:
-                    final_documents.append(sorted_domain_document)
-            sorted_documents = final_documents
+                sort_domains(domains)
+
         else:
             documents_ref = db.collection("_".join(("documents", admin_domain.lower())))
             query_snapshot = documents_ref.get()
-            # Loop through the query results and add documents to the list
-            for document in query_snapshot:
-                document_data = document.to_dict()
-                # Add the document ID to the dictionary
-                document_data['document_id'] = document.id
-                document_name = document_data['document_name']
 
-                if document_name not in unique_document_names:
-                    final_documents.append(document_data)
-                    unique_document_names.add(document_name)
+            # Prepare the query snapshot and return the domains entry point
+            domains = prepare_query_snapshot(query_snapshot, domains, unique_document_names)
+            # Sort each domain
+            sort_domains(domains)
 
-            sorted_documents = sorted(final_documents,
-                                      key=lambda doc: doc.get('last_update'),
-                                      reverse=True)
-
+        print(domains)
         # Render the history.html template with the retrieved documents
-        return render_template('history.html', documents=sorted_documents)
+        return render_template('history.html', domains=domains)
     except Exception as e:
         # Handle errors appropriately
         error_message = str(e)
@@ -295,17 +314,15 @@ def delete_document():
 
                 # Delete the document from Firebase Cloud Storage
                 storage_bucket = storage.bucket()
-                file_path = (f"{user.uid}/"
-                             f"{user.display_name}/"
+                file_path = (f"{document_domain.lower()}/"
                              f"{document_category}/"
                              f"{document_year}/"
+                             f"{user.uid}/"
+                             f"{user.display_name}/"
                              f"{document_name}")
                 blob = storage_bucket.blob(file_path)
                 blob.delete()
 
-                '''global sorted_documents
-                sorted_documents = \
-                    [doc for doc in sorted_documents if doc['document_id'] != document_id]'''
                 response = {'success': True}
             else:
                 response = {'success': False, 'error': 'Document properties do not match'}

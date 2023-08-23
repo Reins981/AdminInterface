@@ -66,6 +66,13 @@ def is_value_present_in_dict(key, list_of_dicts, target_value):
     return False
 
 
+def get_dict_based_on_value_from_dict(key, list_of_dicts, target_value):
+    for dictionary in list_of_dicts:
+        if dictionary.get(key) == target_value:
+            return dictionary
+    return None
+
+
 def upload_document(db, user_id, user_email, user_domain, category, file_path):
     if file_path:
         try:
@@ -76,10 +83,11 @@ def upload_document(db, user_id, user_email, user_domain, category, file_path):
             user_name = user.display_name if user.display_name else "None"
 
             year = datetime.now().year
-            document_path = (f"{user_id}"
-                             f"/{user_name}"
+            document_path = (f"{user_domain.lower()}"
                              f"/{category}"
                              f"/{year}"
+                             f"/{user_id}"
+                             f"/{user_name}"
                              f"/{document_name}")
 
             if user_id:
