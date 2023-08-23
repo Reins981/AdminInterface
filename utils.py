@@ -59,6 +59,13 @@ def get_url_for_firebase_auth():
             f"{api_key_config['current_key']}")
 
 
+def is_value_present_in_dict(key, list_of_dicts, target_value):
+    for dictionary in list_of_dicts:
+        if dictionary.get(key) == target_value:
+            return True
+    return False
+
+
 def upload_document(db, user_id, user_email, user_domain, category, file_path):
     if file_path:
         try:
@@ -100,6 +107,7 @@ def upload_document(db, user_id, user_email, user_domain, category, file_path):
                         "user_domain": user_domain,
                         "document_name": document_name,
                         "document_url": document_url,
+                        "year": year,
                         "deleted_at": None,
                         "last_update": firestore.SERVER_TIMESTAMP,
                         "is_new": False

@@ -23,13 +23,15 @@ import shutil
 from firebase_admin import (
     credentials,
     auth,
-    firestore
+    firestore,
+    storage
 )
 from utils import (
     get_url_for_firebase_auth,
     upload_document,
     CRED,
-    Domains
+    Domains,
+    is_value_present_in_dict
 )
 from thread_base import ThreadPool, TaskCounter
 from mail_template import create_mail_template
@@ -167,9 +169,10 @@ def index():
     users = fetch_users_by_domain(current_user_domain())
     if isinstance(users, str):
         error_message = users
+        # Clear the session data
+        session.clear()
         return render_template(
-            'index.html',
-            users=[],
+            'login.html',
             error_message=error_message
         )
     return render_template('index.html', users=users)
@@ -190,35 +193,70 @@ def document_history():
         if admin_domain == Domains.ALL.value:
             # Get a list of all collections
             collections = [col.id for col in db.collections()]
+            domains = set()
             for collection in collections:
+                domain_documents = []
+                # Clear old references
+                unique_document_names.clear()
                 documents_ref = db.collection(collection)
                 query_snapshot = documents_ref.get()
                 # Loop through the query results and add documents to the list
                 for document in query_snapshot:
                     document_data = document.to_dict()
-                    print(document_data)
+                    # Does the domain exist?
+                    if document_data.get('user_domain') not in domains:
+                        domain = {
+                            'name': document_data.get('user_domain'),
+                            'categories': []
+                        }
+                        domains.add(domain)
+                    # Does the category exist for the specified domain?
+                    relevant_domain = \
+                        [domain for domain in domains if
+                         domain['name'] == document_data.get('user_domain')]
+                    if not is_value_present_in_dict('name',
+                                                    relevant_domain[0].get('categories'),
+                                                    document_data.get('category')):
+                        category = {
+                            'name': document_data.get('category'),
+                            'documents': []
+                        }
+                        relevant_domain[0]['categories'].append(category)
+
+                    # Add the document ID to the dictionary
+                    document_data['document_id'] = document.id
                     document_name = document_data['document_name']
-                    print(document_name)
 
                     if document_name not in unique_document_names:
-                        final_documents.append(document_data)
+                        relevant_domain[0]['categories'].append(document_data)
                         unique_document_names.add(document_name)
+                # Sort each domain
+                sorted_domain_documents = sorted(domain_documents,
+                                                 key=lambda doc: doc.get('last_update'),
+                                                 reverse=True)
+                for sorted_domain_document in sorted_domain_documents:
+                    final_documents.append(sorted_domain_document)
+            sorted_documents = final_documents
         else:
             documents_ref = db.collection("_".join(("documents", admin_domain.lower())))
             query_snapshot = documents_ref.get()
             # Loop through the query results and add documents to the list
             for document in query_snapshot:
                 document_data = document.to_dict()
+                # Add the document ID to the dictionary
+                document_data['document_id'] = document.id
                 document_name = document_data['document_name']
 
                 if document_name not in unique_document_names:
                     final_documents.append(document_data)
                     unique_document_names.add(document_name)
 
-        print("finalllllllll")
-        print(final_documents)
+            sorted_documents = sorted(final_documents,
+                                      key=lambda doc: doc.get('last_update'),
+                                      reverse=True)
+
         # Render the history.html template with the retrieved documents
-        return render_template('history.html', documents=final_documents)
+        return render_template('history.html', documents=sorted_documents)
     except Exception as e:
         # Handle errors appropriately
         error_message = str(e)
@@ -228,15 +266,51 @@ def document_history():
 # ... Other routes and app configuration ...
 
 
-@app.route('/delete_document/<document_id>', methods=['DELETE'])
+@app.route('/delete_document', methods=['DELETE'])
 @login_required
-def delete_document(document_id):
+def delete_document():
     try:
-        # Delete the document with the given document_id
-        # You will need to implement this deletion logic based on your database structure
+        document_id = request.args.get('id')
+        document_name = request.args.get('name')
+        document_year = request.args.get('year')
+        document_domain = request.args.get('domain')
+        document_category = request.args.get('category')
+        document_email = request.args.get('email')
 
-        # Return a success response if the document is deleted
-        response = {'success': True}
+        user = auth.get_user_by_email(document_email)
+        # Check if the document still exists
+        documents_ref = db.collection("_".join(("documents", document_domain.lower())))
+        existing_doc = documents_ref.document(document_id).get()
+
+        if existing_doc.exists:
+            existing_data = existing_doc.to_dict()
+            if (existing_data["category"] == document_category
+                    and existing_data["owner"] == user.uid):
+                # Update the existing document
+                # Set a timestamp field to mark the document as deleted
+                delete_time = firestore.SERVER_TIMESTAMP
+                documents_ref.document(document_id).update({"deleted_at": delete_time})
+                # Delete the document
+                documents_ref.document(document_id).delete()
+
+                # Delete the document from Firebase Cloud Storage
+                storage_bucket = storage.bucket()
+                file_path = (f"{user.uid}/"
+                             f"{user.display_name}/"
+                             f"{document_category}/"
+                             f"{document_year}/"
+                             f"{document_name}")
+                blob = storage_bucket.blob(file_path)
+                blob.delete()
+
+                '''global sorted_documents
+                sorted_documents = \
+                    [doc for doc in sorted_documents if doc['document_id'] != document_id]'''
+                response = {'success': True}
+            else:
+                response = {'success': False, 'error': 'Document properties do not match'}
+        else:
+            response = {'success': False, 'error': 'Document does not exist'}
     except Exception as e:
         # Handle errors appropriately
         response = {'success': False, 'error': str(e)}
@@ -520,7 +594,10 @@ def delete_user(uid):
 def current_user_domain(session_lookup=True, current_user=None):
     if session_lookup:
         # Get the current user's UID
-        current_user = auth.get_user(session['user_id'])
+        try:
+            current_user = auth.get_user(session['user_id'])
+        except Exception as e:
+            return 'ERROR:' + str(e)
 
     # Get the current user's custom claims, including the domain
     custom_claims = current_user.custom_claims
@@ -540,13 +617,20 @@ def sort_users(users_by_domain: dict):
 
 @login_required
 def fetch_users_by_domain(domain):
+    if not domain:
+        return 'Could not find domain for current user'
+
+    if 'ERROR:' in domain:
+        error_message = domain
+        return error_message
+
     try:
         user_records = auth.list_users().users
 
         # Create a dictionary to store users by domain
         users_by_domain = {}
 
-        if domain == 'BACQROO-ALL':
+        if domain == Domains.ALL.value:
             for user in user_records:
                 # Access user's custom claims to check for domain
                 user_domain = current_user_domain(False, user)
@@ -571,9 +655,7 @@ def fetch_users_by_domain(domain):
         return sort_users(users_by_domain)
 
     except Exception as e:
-        # Store the error message in the session
-        session['error_message'] = str(e)
-        return redirect(url_for('index'))
+        return str(e)
 
 
 @login_required
@@ -594,14 +676,13 @@ def clean_directory(directory_path):
 @login_required
 def handle_selection():
     # Create a reference to the Firestore database
-    db = firestore.client()
     selected_user_uid = request.form['user_dropdown']
     selected_email = request.form['selected_email']
     selected_domain = request.form['selected_domain']
 
     response_data = {
         'success': True,
-        'message': 'Document(s) uploaded successfully'
+        'message': ''
     }
 
     upload_files = request.files.getlist('documents')
@@ -658,6 +739,18 @@ def handle_selection():
 
     pool.wait_completion()
 
+    results = pool.thread_results()
+    all_true = any(item[0] for item in results)
+
+    if all_true:
+        response_data['message'] = 'Document(s) uploaded successfully'
+    else:
+        for success, error_message in results:
+            if not success and error_message:
+                response_data['success'] = False
+                response_data['message'] = error_message
+                break
+
     return jsonify(response_data)
 
 
@@ -665,14 +758,13 @@ def handle_selection():
 @login_required
 def handle_selection_specific():
     # Create a reference to the Firestore database
-    db = firestore.client()
     selected_uids = request.form.get('user_dropdown').split(',')
     selected_emails = request.form['selected_email'].split(',')
     selected_domains = request.form['selected_domain'].split(',')
 
     response_data = {
         'success': True,
-        'message': 'Document(s) uploaded successfully'
+        'message': ''
     }
 
     upload_files = request.files.getlist('documents')
@@ -755,6 +847,18 @@ def handle_selection_specific():
             pool.add_task(dummy_task)
     else:
         pool.wait_completion()
+
+        results = pool.thread_results()
+        all_true = any(item[0] for item in results)
+
+        if all_true:
+            response_data['message'] = 'Document(s) uploaded successfully'
+        else:
+            for success, error_message in results:
+                if not success and error_message:
+                    response_data['success'] = False
+                    response_data['message'] = error_message
+                    break
 
     return jsonify(response_data)
 

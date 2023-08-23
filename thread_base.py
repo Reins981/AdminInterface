@@ -28,6 +28,7 @@ class Worker(StoppableThread):
                  tasks,
                  task_name,
                  task_counter,
+                 thread_results,
                  terminate_event=None,
                  schedule_clock=False):
         StoppableThread.__init__(self)
@@ -35,6 +36,7 @@ class Worker(StoppableThread):
         self.task_name = task_name
         self.terminate_condition = terminate_event.is_set() if terminate_event else False
         self.task_counter = task_counter
+        self.thread_results = thread_results
         self.schedule_clock = schedule_clock
 
         # execute run()
@@ -42,7 +44,7 @@ class Worker(StoppableThread):
 
     def run(self):
         error_msg = None
-        raise_exception = False
+        error = False
         stopped = False
         while not self.terminate_condition:
             func, args, kwargs = self.tasks.get()
@@ -50,21 +52,35 @@ class Worker(StoppableThread):
                 Clock.schedule_once(lambda *st: func(*args, **kwargs)) if self.schedule_clock \
                     else func(*args, **kwargs)
             except Exception as e:
-                raise_exception = True
                 error_msg = str(e)
+                error = True
             finally:
                 self.task_counter.set_task_counter()
+                self.thread_results.add_result(False, error_msg) if error \
+                    else self.thread_results.add_result(True, None)
                 self.stop()
                 stopped = True
                 break
-        if raise_exception:
-            raise RuntimeError(error_msg)
 
         if not stopped:
             self.stop()
 
 
-class TaskCounter(object):
+class ThreadResults:
+    def __init__(self):
+        self.lock = threading.RLock()
+        self._results = list()
+
+    def add_result(self, status, error_message):
+        with self.lock:
+            self._results.append((status, error_message))
+
+    @property
+    def results(self):
+        return self._results
+
+
+class TaskCounter:
     def __init__(self):
         self.lock = threading.RLock()
         self.task_counter = 0
@@ -93,6 +109,7 @@ class ThreadPool:
         self.task_name = task_name
         self.tasks = Queue(self.num_threads)
         self.task_counter = task_counter or TaskCounter()
+        self._thread_results = ThreadResults()
 
         for _ in range(self.num_threads):
             print(f"Starting Worker thread")
@@ -101,6 +118,7 @@ class ThreadPool:
                     self.tasks,
                     self.task_name,
                     self.task_counter,
+                    self._thread_results,
                     self.terminate_condition,
                     self.schedule_clock
                 )
@@ -118,3 +136,6 @@ class ThreadPool:
             pass
 
         print("%d tasks completed" % self.num_threads)
+
+    def thread_results(self):
+        return self._thread_results.results

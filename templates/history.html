@@ -7,6 +7,53 @@
     <!-- Include your custom styles here -->
     <style>
         /* Add your custom styles here */
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            padding-top: 20px;
+        }
+
+        .tree {
+            list-style: none;
+            padding-left: 20px;
+        }
+
+        .tree li {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .tree li:hover {
+            background-color: #f8f9fa;
+        }
+
+        .tree li::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            width: 2px;
+            height: 100%;
+            background-color: #d1d3d4;
+        }
+
+        .tree ul {
+            padding-left: 20px;
+        }
+
+        .document-row {
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .document-row:hover {
+            background-color: #f8f9fa;
+        }
     </style>
 </head>
 <body>
@@ -16,34 +63,40 @@
         <div class="alert alert-danger" id="error-message" style="display: none;">
             {{ error_message }}
         </div>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Domain</th>
-                    <th>User Email</th>
-                    <th>Category</th>
-                    <th>Document Name</th>
-                    <th>Last Update</th>
-                    <th>New</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for document in documents %}
-                <tr>
-                    <td>{{ document.get("user_domain") }}</td>
-                    <td>{{ document.get("user_email") }}</td>
-                    <td>{{ document.get("category") }}</td>
-                    <td>{{ document.get("document_name") }}</td>
-                    <td>{{ document.get("last_update") }}</td>
-                    <td>{{ document.get("is_new") }}</td>
-                    <td>
-                        <button class="btn btn-danger" onclick="deleteDocument('{{ document.id }}')">Delete</button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <ul class="tree">
+            {% for domain in domains %}
+            <li>
+                {{ domain.name }}
+                <ul>
+                    {% for category in domain.categories %}
+                    <li>
+                        {{ category.name }}
+                        <ul>
+                            {% for document in category.documents %}
+                            <li class="document-row" data-document-id="{{ document.document_id }}">
+                                {{ document.document_name }} - {{ document.year }}
+                                <button class="btn btn-danger"
+                                    data-document-id="{{ document.document_id }}"
+                                    data-document-domain="{{ domain.name }}"
+                                    data-document-category="{{ category.name }}"
+                                    data-document-email="{{ document.user_email }}"
+                                    onclick="deleteDocument(
+                                        '{{ document.document_id }}',
+                                        '{{ document.document_name }}',
+                                        '{{ document.year }}',
+                                        '{{ domain.name }}',
+                                        '{{ category.name }}',
+                                        '{{ document.user_email }}'
+                                )">Delete</button>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </li>
+            {% endfor %}
+        </ul>
     </div>
 
     <!-- Include jQuery -->
@@ -52,19 +105,25 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <!-- Include your custom JavaScript here -->
     <script>
-        function deleteDocument(documentId) {
+        function deleteDocument(documentId, documentName, documentYear, documentDomain, documentCategory, documentEmail) {
+            // Construct the URL with query parameters
+            var url = `/delete_document?id=${encodeURIComponent(documentId)}&name=${encodeURIComponent(documentName)}&year=${encodeURIComponent(documentYear)}&domain=${encodeURIComponent(documentDomain)}&category=${encodeURIComponent(documentCategory)}&email=${encodeURIComponent(documentEmail)}`;
+
+            // Get the table row associated with the document ID
+            var tableRow = $(`.document-row[data-document-id="${documentId}"]`);
+
             // Send a request to delete the document using AJAX
             $.ajax({
-                url: `/delete_document/${documentId}`,
+                url: url,
                 method: 'DELETE',
                 success: function(response) {
                     // Handle the response, e.g., remove the row from the table
                     if (response.success) {
                         alert('Document deleted successfully');
                         // Remove the row from the table
-                        $(`tr[data-document-id="${documentId}"]`).remove();
+                        tableRow.remove();
                     } else {
-                        alert('Failed to delete document');
+                        alert(response.error);
                     }
                 },
                 error: function() {
