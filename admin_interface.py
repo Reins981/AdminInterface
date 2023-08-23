@@ -316,7 +316,7 @@ def delete_document():
                 storage_bucket = storage.bucket()
                 file_path = (f"{document_domain.lower()}/"
                              f"{document_category}/"
-                             f"{document_year}/"
+                             f"{document_year}"
                              f"{user.uid}/"
                              f"{user.display_name}/"
                              f"{document_name}")

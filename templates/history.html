@@ -80,38 +80,59 @@
                     <li class="category">
                         {{ category.get('name') }}
                         <ul>
+                            {% set documents_by_year = {} %}
                             {% for document in category.documents %}
-                            {% set year = document.get('year') %}
-                            {% if loop.first %}
+                                {% set year = document.get('year') %}
+                                {% if year not in documents_by_year %}
+                                    {% set _ = documents_by_year.update({year: []}) %}
+                                {% endif %}
+                                {% set _ = documents_by_year[year].append(document) %}
+                            {% endfor %}
+                            {% for year, documents in documents_by_year.items() %}
                             <li class="year">
                                 <span>{{ year }}</span>
                                 <ul>
-                            {% endif %}
-                            <li class="document-row" data-document-id="{{ document.document_id }}">
-                                <span>Documents Infos:</span>
-                                <ul>
-                                    <li>User Email: {{ document.user_email }}</li>
-                                    <li>Document Name: {{ document.document_name }}</li>
-                                    <li>Last update: {{ document.last_update }}</li>
+                                    {% set documents_by_user = {} %}
+                                    {% for document in documents %}
+                                        {% set user_email = document.get('user_email') %}
+                                        {% if user_email not in documents_by_user %}
+                                            {% set _ = documents_by_user.update({user_email: []}) %}
+                                        {% endif %}
+                                        {% set _ = documents_by_user[user_email].append(document) %}
+                                    {% endfor %}
+                                    {% for user_email, user_documents in documents_by_user.items() %}
+                                    <li class="user-email">
+                                        <span>User: {{ user_email }}</span>
+                                        <ul>
+                                            {% for document in user_documents %}
+                                            <li class="document-row" data-document-id="{{ document.document_id }}">
+                                                <span>Document:</span>
+                                                <ul>
+                                                    <li>{{ document.document_name }}
+                                                        <br><span style="margin-left: 20px;">Last Update: {{ document.last_update }}</span>
+                                                        <br><span style="margin-left: 20px;">New Document: {{ document.is_new }}</span>
+                                                    </li>
+                                                </ul>
+                                                <button class="btn btn-danger"
+                                                    data-document-id="{{ document.document_id }}"
+                                                    data-document-domain="{{ domain.name }}"
+                                                    data-document-category="{{ category.name }}"
+                                                    data-document-email="{{ document.user_email }}"
+                                                    onclick="deleteDocument(
+                                                        '{{ document.document_id }}',
+                                                        '{{ document.document_name }}',
+                                                        '{{ document.year }}',
+                                                        '{{ domain.name }}',
+                                                        '{{ category.name }}',
+                                                        '{{ document.user_email }}'
+                                                    )">Delete</button>
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </li>
+                                    {% endfor %}
                                 </ul>
-                                <button class="btn btn-danger"
-                                    data-document-id="{{ document.document_id }}"
-                                    data-document-domain="{{ domain.name }}"
-                                    data-document-category="{{ category.name }}"
-                                    data-document-email="{{ document.user_email }}"
-                                    onclick="deleteDocument(
-                                        '{{ document.document_id }}',
-                                        '{{ document.document_name }}',
-                                        '{{ document.year }}',
-                                        '{{ domain.name }}',
-                                        '{{ category.name }}',
-                                        '{{ document.user_email }}'
-                                )">Delete</button>
                             </li>
-                            {% if loop.last %}
-                                </ul>
-                            </li>
-                            {% endif %}
                             {% endfor %}
                         </ul>
                     </li>
@@ -143,6 +164,10 @@
                 $(this).toggleClass('opened');
             });
             $('.tree li.document-row').click(function() {
+                event.stopPropagation(); // Prevent event propagation
+                $(this).toggleClass('opened');
+            });
+            $('.tree li.user-email').click(function() {
                 event.stopPropagation(); // Prevent event propagation
                 $(this).toggleClass('opened');
             });
