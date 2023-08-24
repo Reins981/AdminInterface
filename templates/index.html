@@ -317,10 +317,10 @@
                             {% endif %}
                         </td>
                         <td>
-                            <form method="POST" onsubmit="updateUserRole('{{ user.uid }}'); return false;">
+                            <form method="POST" onsubmit="updateUserRole('{{ user.uid }}', this); return false;">
                                 <input type="hidden" name="uid" value="{{ user.uid }}">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <select id="newRoleDropdown" class="form-control" style="width: 150px;">
+                                    <select class="newRoleDropdown" style="width: 150px;">
                                         <option value="admin">admin</option>
                                         <option value="client">client</option>
                                     </select>
@@ -390,7 +390,7 @@
 
         function updateUserRole(uid) {
 
-            const newRoleDropdown = document.getElementById('newRoleDropdown');
+            const newRoleDropdown = document.querySelector('.newRoleDropdown');
             const selectedRole = newRoleDropdown.value;
 
             fetch('/update_user', {
@@ -429,7 +429,7 @@
                     disabledCell.textContent = user.disabled ? 'Yes' : 'No';
                 } else {
                     const rowCell = tableRow.querySelector('.row-cell');
-                    rowCell.textContent =  user.role
+                    rowCell.textContent = user.role
                 }
             }
         }
