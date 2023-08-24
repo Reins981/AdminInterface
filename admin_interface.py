@@ -700,6 +700,23 @@ def handle_selection():
         'message': ''
     }
 
+    user = auth.get_user_by_email(selected_email)
+    verified = user.custom_claims.get('verified', None)
+
+    if not verified:
+        response_data['success'] = False
+        response_data['message'] = (f"Upload for user `{user.display_name}` is not allowed, "
+                                    f"user is not verified")
+        return jsonify(response_data)
+
+    disabled = user.custom_claims.get('disabled', None)
+
+    if disabled:
+        response_data['success'] = False
+        response_data['message'] = (f"Upload for user `{user.display_name}` is not allowed, "
+                                    f"user is disabled")
+        return jsonify(response_data)
+
     upload_files = request.files.getlist('documents')
 
     # First clean the temo dir
@@ -822,6 +839,8 @@ def handle_selection_specific():
 
     category = request.form['selected_category']
     error = False
+    user_specific_error = None
+    user_error_list = set()
     for upload_file in upload_files:
         document_name = upload_file.filename
 
@@ -829,6 +848,8 @@ def handle_selection_specific():
         temp_file_path = os.path.join(app.config["UPLOAD_FOLDER"], document_name)
 
         for i, selected_user_uid in enumerate(selected_uids):
+            # Reset
+            user_error = False
             selected_email = selected_emails[i]
             selected_domain = selected_domains[i]
 
@@ -840,18 +861,39 @@ def handle_selection_specific():
                 # Break the inner loop...
                 break
 
+            # Do not allow uploads for unverified or disabled users
+            user = auth.get_user_by_email(selected_email)
+            verified = user.custom_claims.get('verified', None)
+
+            if not verified:
+                user_error_list.add(user.display_name)
+                user_error = True
+                user_specific_error = user_error
+
+            disabled = user.custom_claims.get('disabled', None)
+
+            if disabled:
+                user_error_list.add(user.display_name)
+                user_error = True
+                user_specific_error = user_error
+
             # Schedule the upload to happen after a short delay
             print(f"Handle file upload for user {selected_user_uid}/{selected_email}")
             try:
-                pool.add_task(
-                    upload_document,
-                    db,
-                    selected_user_uid,
-                    selected_email,
-                    selected_domain,
-                    category,
-                    temp_file_path,
-                )
+                if user_error:
+                    pool.add_task(
+                        dummy_task
+                    )
+                else:
+                    pool.add_task(
+                        upload_document,
+                        db,
+                        selected_user_uid,
+                        selected_email,
+                        selected_domain,
+                        category,
+                        temp_file_path,
+                    )
             except Exception as e:
                 response_data = {
                     'success': False,
@@ -860,24 +902,26 @@ def handle_selection_specific():
                 error = True
                 # Break the inner loop...
                 break
-
-            # Send the notification mail
-            user = auth.get_user_by_email(selected_email)
-            print(f"Send mail to {user.display_name}: {selected_email}")
-            status, msg = send_notification_mail(user.display_name, selected_email)
-
-            if status != 'success':
-                response_data = {
-                    'success': False,
-                    "message": msg
-                }
-                error = True
-                break
         else:
             # Continue if the inner loop wasn't broken.
             continue
         # Inner loop was broken, break the outer.
         break
+
+    mail_error_messages = ""
+    for i, selected_user_uid in enumerate(selected_uids):
+        selected_email = selected_emails[i]
+        user = auth.get_user_by_email(selected_email)
+
+        if user.display_name not in user_error_list:
+            # Send the notification mail
+            print(f"Send mail to {user.display_name}: {selected_email}")
+            status, msg = send_notification_mail(user.display_name, selected_email)
+
+            if status != 'success':
+                mail_error_messages += "/".join((msg, mail_error_messages))
+                response_data['message'] += mail_error_messages
+                error = True
 
     if error:
         pool.terminate_condition.set()
@@ -892,6 +936,13 @@ def handle_selection_specific():
 
         if all_true:
             response_data['message'] = 'Document(s) uploaded successfully, Notification(s) sent..'
+
+            if user_specific_error:
+                response_data['message'] = (f'Document(s) uploaded and '
+                                            f'notifications sent successfully '
+                                            f'but not for the following users: '
+                                            f'{str(user_error_list)}. '
+                                            f'These users are disabled or not verified')
         else:
             for success, error_message in results:
                 if not success and error_message:
