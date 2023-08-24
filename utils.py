@@ -52,6 +52,21 @@ def parse_client_setting_from_json(json_file_path, key):
         return None
 
 
+# Function to get all users
+def get_all_users():
+    users = []
+    page = auth.list_users()  # Get the first page of users
+
+    while page:
+        for user in page.users:
+            users.append(user)  # Append each user to the list
+
+        # Check if there's more users to fetch
+        page = page.get_next_page() if page.has_next_page else None
+
+    return users
+
+
 def get_url_for_firebase_auth():
     api_key_config = parse_client_setting_from_json(FIREBASE_SERVICES, 'api_key')
     # URL for the Firebase Auth REST API

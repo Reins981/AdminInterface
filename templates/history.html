@@ -6,6 +6,21 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <!-- Include your custom styles here -->
     <style>
+        /* Position the logout button at the top left corner */
+        .left-logout {
+            position: absolute;
+            top: 0;
+            right: 0;
+            margin: 10px;
+        }
+        .left-menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            margin: 10px;
+        }
+    </style>
+    <style>
         /* Add your custom styles here */
         body {
             font-family: Arial, sans-serif;
@@ -111,6 +126,18 @@
 </head>
 <body>
     <div class="container">
+        <div class="d-flex justify-content-end">
+                <img src="../images/logo.jpg" alt="Logo" height="100">
+        </div>
+        <div class="left-logout">
+                <!-- Display logout link if authenticated -->
+                {% if 'user_id' in session %}
+                <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+                {% endif %}
+        </div>
+        <div class="left-menu">
+            <a href="{{ url_for('menu') }}" class="btn btn-primary">Menu</a>
+        </div>
         <h1>Document History</h1>
         <!-- Add the search bar -->
         <div class="input-group mb-3">

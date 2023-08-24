@@ -1,6 +1,5 @@
 import threading
 import datetime
-from flask_mail import Mail, Message
 from init_secret import generate_token
 from validate_email_address import validate_email
 from flask import (
@@ -12,7 +11,6 @@ from flask import (
     session,
     jsonify,
     send_from_directory,
-    render_template_string
 )
 import firebase_admin
 from functools import wraps
@@ -32,24 +30,19 @@ from utils import (
     CRED,
     Domains,
     is_value_present_in_dict,
-    get_dict_based_on_value_from_dict
+    get_dict_based_on_value_from_dict,
+    get_all_users
 )
 from thread_base import ThreadPool, TaskCounter
-from mail_template import create_mail_template
+from mail_template import (
+    send_verify_user_mail,
+    send_notification_mail,
+    set_app
+)
 
 app = Flask(__name__, static_folder='images')
 app.secret_key = 'tz957fpzG0Pib5GPFd1rdv82v1abxbrZX9btUAL_dpI'
-# Set up the SendGrid API client
-app.config['MAIL_SERVER'] = 'smtp.sendgrid.net'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'apikey'
-# app.config['MAIL_PASSWORD'] = os.environ.get('SENDGRID_API_KEY')
-app.config[
-    'MAIL_PASSWORD'] = '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'
-# app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
-app.config['MAIL_DEFAULT_SENDER'] = "default2402@gmail.com"
-mail = Mail(app)
+set_app(app)
 
 # Define a temporary folder for storing uploaded files
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "temporary_upload")
@@ -162,6 +155,12 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
+
+@app.route('/menu')
+@login_required
+def menu():
+    return redirect(url_for('index'))
 
 
 @app.route('/', methods=['GET'])
@@ -385,23 +384,13 @@ def send_verification_email():
                                         _external=True)
             # Send email with verification_link to the user's email address
             print(verification_link)
-            # Render and send the email using Flask's render_template_string function
-            logo_url = url_for('logo', filename='images/logo.png', _external=True)
-            subject, html_content = create_mail_template(verification_link, logo_url)
-            rendered_html = render_template_string(html_content)
-
-            msg = Message(subject, recipients=[email])
-            msg.html = rendered_html
-            # Send the email
-            try:
-                mail.send(msg)
-                message = (f'User `{user.display_name}` created. '
-                           f'Verification email sent successfully')
-                session['success_message'] = message
-            except Exception as e:
+            status, msg = send_verify_user_mail(user.display_name, verification_link, email)
+            if status != 'success':
                 error = True
-                # Store the error message in the session
-                session['error_message'] = str(e)
+                session['error_message'] = msg
+            else:
+                session['success_message'] = msg
+
     except Exception as e:
         error = True
         # Store the error message in the session
@@ -485,6 +474,15 @@ def create_user():
         return redirect(url_for('index'))
 
     try:
+
+        users = get_all_users()
+
+        results = filter(lambda x: x.custom_claims['domain'] == Domains.ALL.value, users)
+        if results:
+            # Store the error message in the session
+            session['error_message'] = "A super user was created already!"
+            return redirect(url_for('index'))
+
         # Create a new user with email and password
         user = auth.create_user(email=email, password=password, display_name=username)
 
@@ -766,6 +764,17 @@ def handle_selection():
                 response_data['message'] = error_message
                 break
 
+    # Send the notification mail
+    user = auth.get_user_by_email(selected_email)
+    status, msg = send_notification_mail(user.display_name, selected_email)
+
+    if status != 'success':
+        response_data['success'] = False
+        response_data['message'] = ('Document(s) uploaded successfully '
+                                    'but a notification error occured: ') + msg
+    else:
+        response_data['message'] += ", Notification sent.."
+
     return jsonify(response_data)
 
 
@@ -849,6 +858,18 @@ def handle_selection_specific():
                 error = True
                 # Break the inner loop...
                 break
+
+            # Send the notification mail
+            user = auth.get_user_by_email(selected_email)
+            status, msg = send_notification_mail(user.display_name, selected_email)
+
+            if status != 'success':
+                response_data = {
+                    'success': False,
+                    "message": msg
+                }
+                error = True
+                break
         else:
             # Continue if the inner loop wasn't broken.
             continue
@@ -867,7 +888,7 @@ def handle_selection_specific():
         all_true = any(item[0] for item in results)
 
         if all_true:
-            response_data['message'] = 'Document(s) uploaded successfully'
+            response_data['message'] = 'Document(s) uploaded successfully, Notification(s) sent..'
         else:
             for success, error_message in results:
                 if not success and error_message:
