@@ -317,12 +317,12 @@
                             {% endif %}
                         </td>
                         <td>
-                            <form method="POST" onsubmit="updateUserRole('{{ user.uid }}', this); return false;">
+                            <form method="POST" onsubmit="updateUserRole('{{ user.uid }}', this.parentElement.parentElement.querySelector('.newRoleDropdown')); return false;">
                                 <input type="hidden" name="uid" value="{{ user.uid }}">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <select class="newRoleDropdown" style="width: 150px;">
-                                        <option value="admin">admin</option>
-                                        <option value="client">client</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="client">Client</option>
                                     </select>
                                     <div class="input-group-append">
                                         <button type="submit" class="btn btn-success ml-2">Update</button>
@@ -388,10 +388,9 @@
             });
         }
 
-        function updateUserRole(uid) {
+        function updateUserRole(uid, dropdownElement) {
 
-            const newRoleDropdown = document.querySelector('.newRoleDropdown');
-            const selectedRole = newRoleDropdown.value;
+            const selectedRole = dropdownElement.value;
 
             fetch('/update_user', {
                 method: 'POST',

@@ -1,8 +1,6 @@
-
 import threading
-import time
 from kivy.clock import Clock
-from queue import Queue, Empty
+from queue import Queue
 
 
 class StoppableThread(threading.Thread):

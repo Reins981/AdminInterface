@@ -26,14 +26,19 @@ FIREBASE_SERVICES = os.path.join(
     "google-services.json"
 )
 
-BASE_PATH_SA = os.path.join(
-    os.path.abspath(os.path.dirname(__file__)),
-    "service_account"
-)
-
 CRED = os.path.join(
     BASE_PATH_SA,
     "documentmanagement-f7ce9-firebase-adminsdk-v2523-2961c1b483.json"
+)
+
+APP_SETTINGS = os.path.join(
+    BASE_PATH_SA,
+    "app_settings.json"
+)
+
+MAIL_SETTINGS = os.path.join(
+    BASE_PATH_SA,
+    "mail_settings.json"
 )
 
 
@@ -42,7 +47,25 @@ def parse_client_setting_from_json(json_file_path, key):
         with open(json_file_path, 'r') as json_file:
             data = json.load(json_file)
             if 'client' in data and key in data['client'][0]:
-                key_config = data['client'][0][key][0]
+                if isinstance(data['client'][0][key], list):
+                    key_config = data['client'][0][key][0]
+                else:
+                    key_config = data['client'][0][key]
+                return key_config
+            else:
+                print(f"API {key} not found in JSON file.")
+                return None
+    except Exception as e:
+        print("Error parsing JSON file:", e)
+        return None
+
+
+def parse_project_setting_from_json(json_file_path, key):
+    try:
+        with open(json_file_path, 'r') as json_file:
+            data = json.load(json_file)
+            if 'project_info' in data and key in data['project_info']:
+                key_config = data['project_info'][key]
                 return key_config
             else:
                 print(f"API {key} not found in JSON file.")
@@ -72,6 +95,50 @@ def get_url_for_firebase_auth():
     # URL for the Firebase Auth REST API
     return (f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key="
             f"{api_key_config['current_key']}")
+
+
+def get_app_secret_key():
+    return parse_project_setting_from_json(APP_SETTINGS, 'secret_key')
+
+
+def get_app_temporary_upload_folder():
+    return parse_project_setting_from_json(APP_SETTINGS, 'temporary_upload')
+
+
+def get_firestore_storage_bucket():
+    return parse_project_setting_from_json(FIREBASE_SERVICES, 'storage_bucket')
+
+
+def get_app_project_id():
+    return parse_project_setting_from_json(FIREBASE_SERVICES, 'project_id')
+
+
+def get_app_project_number():
+    return parse_project_setting_from_json(FIREBASE_SERVICES, 'project_number')
+
+
+def get_mail_server():
+    return parse_project_setting_from_json(MAIL_SETTINGS, 'mail_server')
+
+
+def get_mail_port():
+    return parse_project_setting_from_json(MAIL_SETTINGS, 'mail_port')
+
+
+def get_mail_tls_support():
+    return parse_project_setting_from_json(MAIL_SETTINGS, 'mail_use_tls')
+
+
+def get_mail_username():
+    return parse_project_setting_from_json(MAIL_SETTINGS, 'mail_username')
+
+
+def get_mail_password():
+    return parse_project_setting_from_json(MAIL_SETTINGS, 'mail_password')
+
+
+def get_mail_default_sender():
+    return parse_project_setting_from_json(MAIL_SETTINGS, 'mail_default_sender')
 
 
 def is_value_present_in_dict(key, list_of_dicts, target_value):

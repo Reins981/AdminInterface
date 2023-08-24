@@ -1,8 +1,15 @@
 from flask_mail import Mail, Message
 from flask import (
     url_for,
-    session,
     render_template_string
+)
+from utils import (
+    get_mail_server,
+    get_mail_port,
+    get_mail_password,
+    get_mail_username,
+    get_mail_tls_support,
+    get_mail_default_sender
 )
 
 app = None
@@ -13,15 +20,13 @@ def set_app(application):
     global app, mail
     app = application
     # Set up the SendGrid API client
-    app.config['MAIL_SERVER'] = 'smtp.sendgrid.net'
-    app.config['MAIL_PORT'] = 587
-    app.config['MAIL_USE_TLS'] = True
-    app.config['MAIL_USERNAME'] = 'apikey'
-    # app.config['MAIL_PASSWORD'] = os.environ.get('SENDGRID_API_KEY')
+    app.config['MAIL_SERVER'] = get_mail_server()
+    app.config['MAIL_PORT'] = get_mail_port()
+    app.config['MAIL_USE_TLS'] = get_mail_tls_support()
+    app.config['MAIL_USERNAME'] = get_mail_username()
     app.config[
-        'MAIL_PASSWORD'] = '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'
-    # app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
-    app.config['MAIL_DEFAULT_SENDER'] = "default2402@gmail.com"
+        'MAIL_PASSWORD'] = get_mail_password()
+    app.config['MAIL_DEFAULT_SENDER'] = get_mail_default_sender()
     mail = Mail(app)
 
 

@@ -31,7 +31,10 @@ from utils import (
     Domains,
     is_value_present_in_dict,
     get_dict_based_on_value_from_dict,
-    get_all_users
+    get_all_users,
+    get_app_secret_key,
+    get_app_temporary_upload_folder,
+    get_firestore_storage_bucket
 )
 from thread_base import ThreadPool, TaskCounter
 from mail_template import (
@@ -41,11 +44,11 @@ from mail_template import (
 )
 
 app = Flask(__name__, static_folder='images')
-app.secret_key = 'tz957fpzG0Pib5GPFd1rdv82v1abxbrZX9btUAL_dpI'
+app.secret_key = get_app_secret_key()
 set_app(app)
 
 # Define a temporary folder for storing uploaded files
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "temporary_upload")
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), get_app_temporary_upload_folder())
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 # Ensure the temporary upload folder exists
@@ -55,7 +58,7 @@ if not os.path.exists(UPLOAD_FOLDER):
 # Initialize Firebase Admin SDK
 cred = credentials.Certificate(CRED)
 firebase_admin.initialize_app(cred, {
-    'storageBucket': 'documentmanagement-f7ce9.appspot.com'
+    'storageBucket': get_firestore_storage_bucket()
 })
 
 # Create a Firestore client instance
@@ -578,7 +581,6 @@ def update_user():
                 "role": custom_claims_updated['role']
             }
         }
-
         return jsonify(response_data)
     except Exception as e:
         response_data = {

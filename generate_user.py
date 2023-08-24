@@ -4,12 +4,12 @@ import hashlib
 import argparse
 import firebase_admin
 from firebase_admin import auth, credentials
-from utils import CRED
+from utils import CRED, get_firestore_storage_bucket
 
 # Initialize Firebase Admin SDK
 cred = credentials.Certificate(CRED)
 firebase_admin.initialize_app(cred, {
-    'storageBucket': 'documentmanagement-f7ce9.appspot.com'
+    'storageBucket': get_firestore_storage_bucket()
 })
 
 
