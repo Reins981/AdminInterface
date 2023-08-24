@@ -34,7 +34,8 @@ from utils import (
     get_all_users,
     get_app_secret_key,
     get_app_temporary_upload_folder,
-    get_firestore_storage_bucket
+    get_firestore_storage_bucket,
+    get_app_max_num_super_users
 )
 from thread_base import ThreadPool, TaskCounter
 from mail_template import (
@@ -480,10 +481,11 @@ def create_user():
 
         users = get_all_users()
 
-        results = filter(lambda x: x.custom_claims['domain'] == Domains.ALL.value, users)
-        if results:
+        allowed_number = get_app_max_num_super_users()
+        results = list(filter(lambda x: x.custom_claims['domain'] == Domains.ALL.value, users))
+        if len(results) > allowed_number:
             # Store the error message in the session
-            session['error_message'] = "A super user was created already!"
+            session['error_message'] = f"Maximum allowed number of Super Users is {allowed_number}!"
             return redirect(url_for('index'))
 
         # Create a new user with email and password
@@ -954,4 +956,4 @@ def handle_selection_specific():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)

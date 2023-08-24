@@ -105,6 +105,10 @@ def get_app_temporary_upload_folder():
     return parse_project_setting_from_json(APP_SETTINGS, 'temporary_upload')
 
 
+def get_app_max_num_super_users():
+    return parse_project_setting_from_json(APP_SETTINGS, 'max_super_users')
+
+
 def get_firestore_storage_bucket():
     return parse_project_setting_from_json(FIREBASE_SERVICES, 'storage_bucket')
 
