@@ -861,6 +861,7 @@ def handle_selection_specific():
 
             # Send the notification mail
             user = auth.get_user_by_email(selected_email)
+            print(f"Send mail to {user.display_name}: {selected_email}")
             status, msg = send_notification_mail(user.display_name, selected_email)
 
             if status != 'success':

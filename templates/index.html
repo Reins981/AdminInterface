@@ -576,6 +576,7 @@
 
              // Check if a document is selected
             if (documentInput.files.length == 0) {
+                successMessageElement.style.display = 'none';
                 errorMessageElement.textContent = 'Please select a document to upload.';
                 errorMessageElement.style.display = 'block';
                 return; // Stop further processing
