@@ -1,0 +1,4 @@
+validate-email-address==1
+Flask==2.3.2
+Flask-Mail==0.9.1
+firebase-admin==6.2.0

@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "537182560482",
+    "project_id": "documentmanagement-f7ce9",
+    "storage_bucket": "documentmanagement-f7ce9.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:537182560482:android:d27bca9f439b9d8b19febb",
+        "android_client_info": {
+          "package_name": "mx.accounting.SecureDocManager"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "537182560482-f1r105oinv1asrhneu2opj4i7pkqrqlq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvJ0dLZuQ4UkWidXhPeXghqz3N7u_X2Xw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "537182560482-f1r105oinv1asrhneu2opj4i7pkqrqlq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
