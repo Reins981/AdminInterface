@@ -190,8 +190,7 @@ def upload_document(db, user_id, user_email, user_domain, category, file_path):
                     blob.patch()
 
                     # Get the download URL of the uploaded document
-                    document_url = blob.generate_signed_url(
-                        expiration=300)  # URL expires in 5 minutes
+                    document_url = blob.generate_signed_url()  # URL expires never
 
                     new_document = {
                         "user_name": user_name,
