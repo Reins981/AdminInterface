@@ -5,7 +5,7 @@ from firebase_admin import (
     auth,
     storage
 )
-from datetime import datetime
+import datetime
 from threading import current_thread
 from enum import Enum
 
@@ -168,7 +168,7 @@ def upload_document(db, user_id, user_email, user_domain, category, file_path):
             user = auth.get_user_by_email(user_email)  # Replace with the user's email
             user_name = user.display_name if user.display_name else "None"
 
-            year = datetime.now().year
+            year = datetime.datetime.now().year
             document_path = (f"{user_domain.lower()}"
                              f"/{category}"
                              f"/{year}"
@@ -189,8 +189,13 @@ def upload_document(db, user_id, user_email, user_domain, category, file_path):
                     blob.metadata = {'uid': user_id}
                     blob.patch()
 
+                    # Calculate the current datetime
+                    current_datetime = datetime.datetime.utcnow()
+
+                    # Calculate the expiration datetime by adding 50 years to the current datetime
+                    expiration_datetime = current_datetime + datetime.timedelta(days=30 * 365)
                     # Get the download URL of the uploaded document
-                    document_url = blob.generate_signed_url()  # URL expires never
+                    document_url = blob.generate_signed_url(expiration=expiration_datetime)
 
                     new_document = {
                         "user_name": user_name,
