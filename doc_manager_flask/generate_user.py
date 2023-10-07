@@ -4,7 +4,7 @@ import hashlib
 import argparse
 import firebase_admin
 from firebase_admin import auth, credentials
-from utils import CRED, get_firestore_storage_bucket
+from utils import CRED, get_firestore_storage_bucket, Domains
 
 # Initialize Firebase Admin SDK
 cred = credentials.Certificate(CRED)
@@ -24,6 +24,7 @@ def hash_password(password, salt=None):
 
 def create_user(username, email, password, role, domain):
     _, hashed_password = hash_password(password)
+    role = 'super_admin' if role == 'admin' and domain == Domains.ALL.value else role
     print(f"Creating user:")
     print(f"\tusername: {username}")
     print(f"\temail: {email}")

@@ -130,7 +130,7 @@ def login():
                 role = user.custom_claims.get('role', None)
                 verified = user.custom_claims.get('verified', None)
                 admin_domain = user.custom_claims.get('domain', None)
-                if role and role == 'admin':
+                if role and (role == 'admin' or role == 'super_admin'):
                     if verified:
                         session['user_id'] = user.uid
                         session['display_name'] = user.display_name
@@ -463,6 +463,7 @@ def create_user():
     password = request.form['password']
     role = request.form['role']
     domain = request.form['domain']
+    role = 'super_admin' if role == 'admin' and domain == Domains.ALL.value else role
 
     if not is_valid_email(email):
         error_message = "Invalid email address format"
@@ -940,11 +941,19 @@ def handle_selection_specific():
             response_data['message'] = 'Document(s) uploaded successfully, Notification(s) sent..'
 
             if user_specific_error:
-                response_data['message'] = (f'Document(s) uploaded and '
-                                            f'notifications sent successfully '
-                                            f'but not for the following users: '
-                                            f'{str(user_error_list)}. '
-                                            f'These users are disabled or not verified')
+                if len(user_error_list) > 1:
+                    response_data['message'] = (f'Document(s) uploaded and '
+                                                f'notifications sent successfully '
+                                                f'but not for the following users: '
+                                                f'{str(user_error_list)}. '
+                                                f'These users are disabled or not verified')
+                else:
+                    response_data['success'] = False
+                    response_data['message'] = (f'Document(s) not uploaded '
+                                                f'for the following user: '
+                                                f'{str(user_error_list)}. '
+                                                f'This user is disabled or not verified')
+
         else:
             for success, error_message in results:
                 if not success and error_message:
@@ -956,4 +965,4 @@ def handle_selection_specific():
 
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(debug=True)
