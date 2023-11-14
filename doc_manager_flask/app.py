@@ -1,5 +1,6 @@
 import threading
 import datetime
+import urllib.parse
 from init_secret import generate_token
 from validate_email_address import validate_email
 from flask import (
@@ -71,7 +72,7 @@ def requires_admin_role():
         return False
 
     user_role = session['role']
-    return user_role == 'admin'
+    return user_role == 'admin' or user_role == 'super_admin'
 
 
 def dummy_task():
@@ -81,7 +82,10 @@ def dummy_task():
 @app.before_request
 def before_request():
     if request.endpoint != 'login' and not requires_admin_role():
-        return redirect(url_for('login'))
+        return render_template(
+            'login.html',
+            error_message="Only admins are allowed to login"
+        )
 
 
 # Authentication decorator
@@ -132,6 +136,7 @@ def login():
                 admin_domain = user.custom_claims.get('domain', None)
                 if role and (role == 'admin' or role == 'super_admin'):
                     if verified:
+                        session.clear()
                         session['user_id'] = user.uid
                         session['display_name'] = user.display_name
                         session['role'] = role

@@ -31,7 +31,7 @@ def set_app(application):
 
 
 def create_mail_template(verification_link, logo_url):
-    subject = "Verify Your Email Address - BACQROO Accounting"
+    subject = "Verify Your Email Address - TLK AG"
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -45,13 +45,13 @@ def create_mail_template(verification_link, logo_url):
                     <img src="{logo_url}" alt="BACQROO Logo" style="max-width: 100%; height: auto;">
                 </div>
                 <div style="padding: 20px; text-align: center;">
-                    <h1 style="color: #333333;">Welcome to BACQROO Accounting</h1>
+                    <h1 style="color: #333333;">Welcome to TLK AG</h1>
                     <p style="color: #555555;">Please verify your email address by clicking the link below:</p>
                     <p><a href="{verification_link}" style="background-color: #007bff; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Email</a></p>
                     <p style="color: #555555;">If you did not sign up for an account, you can ignore this email.</p>
                 </div>
                 <div style="padding: 20px; background-color: #f5f5f5; text-align: center;">
-                    <p style="color: #777777;">If you have any questions or need assistance, please contact our support team at <a href="mailto:Serranop@bacqroo.com" style="color: #007bff;">Serranop@bacqroo.com</a>.</p>
+                    <p style="color: #777777;">If you have any questions or need assistance, please contact our support team at <a href="mailto:Superuser@tlk.com" style="color: #007bff;">Superuser@tlk.com</a>.</p>
                     <p style="color: #777777;">C. 42 Nte Manzana 141, Zazil-ha, 77720 Playa del Carmen, Q.R., Mexiko</p>
                 </div>
             </div>
@@ -63,7 +63,7 @@ def create_mail_template(verification_link, logo_url):
 
 
 def create_mail_template_notification(user_name, logo_url):
-    subject = "Document update - BACQROO Accounting"
+    subject = "Document update - TLK AG"
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -77,12 +77,12 @@ def create_mail_template_notification(user_name, logo_url):
                     <img src="{logo_url}" alt="BACQROO Logo" style="max-width: 100%; height: auto;">
                 </div>
                 <div style="padding: 20px; text-align: center;">
-                    <h1 style="color: #333333;">Welcome back to BACQROO Accounting {user_name}</h1>
+                    <h1 style="color: #333333;">Welcome back to TLK AG {user_name}</h1>
                     <p style="color: #555555;">New documents are available in your account.</p>
                     <p style="color: #555555;">Please open your mobile App to access them.</p>
                 </div>
                 <div style="padding: 20px; background-color: #f5f5f5; text-align: center;">
-                    <p style="color: #777777;">If you have any questions or need assistance, please contact our support team at <a href="mailto:Serranop@bacqroo.com" style="color: #007bff;">Serranop@bacqroo.com</a>.</p>
+                    <p style="color: #777777;">If you have any questions or need assistance, please contact our support team at <a href="mailto:Superuser@tlk.com" style="color: #007bff;">Superuser@tlk.com</a>.</p>
                     <p style="color: #777777;">C. 42 Nte Manzana 141, Zazil-ha, 77720 Playa del Carmen, Q.R., Mexiko</p>
                 </div>
             </div>

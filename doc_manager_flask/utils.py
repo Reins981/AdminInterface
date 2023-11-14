@@ -11,9 +11,10 @@ from enum import Enum
 
 
 class Domains(Enum):
-    PDC = "BACQROO-PDC"
-    MEX = "BACQROO-MEX"
-    ALL = "BACQROO-ALL"
+    ALL = "TLK-ALL"
+    IBK = "TLK-IBK"
+    IBK_L = "TLK-IBK-L"
+    IM = "TLK-IM"
 
 
 BASE_PATH_SA = os.path.join(

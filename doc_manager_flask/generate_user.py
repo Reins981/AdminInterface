@@ -87,8 +87,8 @@ if __name__ == '__main__':  # noqa C901
                         "--domain",
                         dest="domain",
                         type=str,
-                        default="BACQROO-ALL",
-                        help="domain the user belongs to [BACQROO-ALL,BACQROO-PDC,BACQROO-MEX]")
+                        default="TLK-ALL",
+                        help="domain the user belongs to [TLK-ALL,TLK-IBK,TLK-IBK-L,TLK-IM]")
 
     args = parser.parse_args()
 

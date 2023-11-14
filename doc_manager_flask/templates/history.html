@@ -190,13 +190,14 @@
                                 {% set documents_by_user = {} %}
                                 {% for document in documents %}
                                     {% set user_email = document.get('user_email') %}
+                                    {% set user_name = document.get('user_name') %}
                                     {% if user_email not in documents_by_user %}
-                                        {% set _ = documents_by_user.update({user_email: []}) %}
+                                        {% set _ = documents_by_user.update({(user_email, user_name): []}) %}
                                     {% endif %}
-                                    {% set _ = documents_by_user[user_email].append(document) %}
+                                    {% set _ = documents_by_user[(user_email, user_name)].append(document) %}
                                 {% endfor %}
-                                {% for user_email, user_documents in documents_by_user.items() %}
-                                <li class="user-email">{{ user_email }}
+                                {% for user, user_documents in documents_by_user.items() %}
+                                <li class="user-email">{{ user[0] ~ ' (' ~ user[1] ~ ')' }}
                                     <ul>
                                         {% for document in user_documents %}
                                         <li class="document-row" data-document-id="{{ document.document_id }}" data-new="{{ document.is_new }}">

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>BACQROO Admin Interface</title>
+    <title>TLK Admin Interface</title>
     <!-- Include jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Include Bootstrap CSS -->
@@ -198,9 +198,14 @@
                 <div class="form-group">
                     <label for="domain">Domain:</label>
                     <select name="domain" class="form-control" required>
-                        <option value="BACQROO-PDC">BACQROO-PDC</option>
-                        <option value="BACQROO-MEX">BACQROO-MEX</option>
-                        <option value="BACQROO-ALL">BACQROO-ALL</option>
+                        {% if session['role'] == 'super_admin' %}
+                            <option value="TLK-ALL">TLK-ALL</option>
+                            <option value="TLK-IBK">TLK-IBK</option>
+                            <option value="TLK-IBK-L">TLK-IBK-L</option>
+                            <option value="TLK-IM">TLK-IM</option>
+                        {% else %}
+                            <option value="{{ session['admin_domain'] }}">{{ session['admin_domain'] }}</option>
+                        {% endif %}
                     </select>
                 </div>
                 <div class="alert alert-danger" id="error-message" style="display: none;">
@@ -231,8 +236,8 @@
                         {% endfor %}
                     </select>
                     <select id="categoryDropdown" class="form-control">
-                        <option value="Tax">Tax</option>
-                        <option value="Financial">Financial</option>
+                        <option value="Offers">Offers</option>
+                        <option value="Plans">Plans</option>
                     </select>
                     <div class="custom-file">
                         <input type="file" name="document" class="custom-file-input" id="documentInput" multiple>
@@ -321,15 +326,15 @@
                                 <input type="hidden" name="uid" value="{{ user.uid }}">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <select class="newRoleDropdown" style="width: 150px;">
-                                        {% if user.custom_claims and 'domain' in user.custom_claims and user.custom_claims['domain'] == 'BACQROO-ALL' %}
+                                        {% if user.custom_claims and 'domain' in user.custom_claims and user.custom_claims['domain'] == 'TLK-ALL' %}
                                             disabled
                                         {% endif %}
                                         <option value="admin">Admin</option>
                                         <option value="client">Client</option>
                                     </select>
                                     <div class="input-group-append">
-                                        <!-- Disable the "Update" button if the user's domain is "BACQROO-ALL" -->
-                                        {% if user.custom_claims and 'domain' in user.custom_claims and user.custom_claims['domain'] == 'BACQROO-ALL' %}
+                                        <!-- Disable the "Update" button if the user's domain is "TLK-ALL" -->
+                                        {% if user.custom_claims and 'domain' in user.custom_claims and user.custom_claims['domain'] == 'TLK-ALL' %}
                                         <button type="submit" class="btn btn-success ml-2" disabled>Update</button>
                                         {% else %}
                                         <button type="submit" class="btn btn-success ml-2">Update</button>
