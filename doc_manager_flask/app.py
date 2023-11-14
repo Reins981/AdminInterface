@@ -241,6 +241,7 @@ def prepare_query_snapshot(query_snapshot, domains, unique_document_names):
                 category_dict['documents'].append(document_data)
             unique_document_names.add(document_name)
 
+    print(domains)
     return domains
 
 

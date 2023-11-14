@@ -191,7 +191,7 @@
                                 {% for document in documents %}
                                     {% set user_email = document.get('user_email') %}
                                     {% set user_name = document.get('user_name') %}
-                                    {% if user_email not in documents_by_user %}
+                                    {% if (user_email, user_name) not in documents_by_user %}
                                         {% set _ = documents_by_user.update({(user_email, user_name): []}) %}
                                     {% endif %}
                                     {% set _ = documents_by_user[(user_email, user_name)].append(document) %}
@@ -258,16 +258,17 @@
             $('#search-results').slideUp(); // Slide up search results box
         });
         $('#search-input-strict').on('input', function() {
-            $('#search-results-strict').slideUp(); // Slide up search results box
+            $('#search-results').slideUp(); // Slide up search results box
         });
 
         // Click event listener for search button
         $('#search-button').click(function() {
             errorMessageElement.style.display = 'none';
             const searchQuery = $('#search-input').val().trim().toLowerCase();
+            $('#search-input-strict').val('');
             performSearch(searchQuery); // Perform the search
         });
-        // Click event listener for search button
+        // Click event listener for search strict button
         $('#search-button-strict').click(function() {
             errorMessageElement.style.display = 'none';
             const searchQuery = $('#search-input-strict').val().trim().toLowerCase();
@@ -276,65 +277,90 @@
         });
 
         function performSearch(query) {
-            const results = [];
+            const searchResultsContainer = $('#search-results');
+
+            // Remove all existing results
+            searchResultsContainer.empty();
+
+            if (query.length === 0) {
+                errorMessageElement.style.display = 'none';
+                return;
+            }
 
             // Loop through each document row
             $('.document-row').each(function() {
                 const documentName = $(this).find('.document-name').text().trim().toLowerCase();
+                const userEmail = $(this).closest('.user-email').text().trim().toLowerCase();
+                const documentYear = $(this).closest('.year').find('span').text().trim().toLowerCase();
+                const documentCategory = $(this).closest('.category').text().trim().toLowerCase();
+
+                // Check if query matches document name or user email or year or category
+                if (
+                    documentName.includes(query) ||
+                    userEmail.includes(query) ||
+                    documentYear.includes(query) ||
+                    documentCategory.includes(query)
+                ) {
+                    // Append the matching row HTML to results
+                    searchResultsContainer.append($(this).clone());
+                }
+            });
+
+            // Update search results container
+            if (searchResultsContainer.children().length > 0) {
+                searchResultsContainer.slideDown(); // Slide down search results box
+            } else {
+                searchResultsContainer.html('<p>No matching documents found.</p>');
+                searchResultsContainer.slideUp(); // Slide up search results box
+            }
+        }
+
+        function performSearchStrict(searchKeywords) {
+            const searchResultsContainer = $('#search-results');
+
+            // Remove all existing results
+            searchResultsContainer.empty();
+
+            // Check if there are no keywords
+            if (searchKeywords.length === 0 || searchKeywords[0].trim() === '') {
+                errorMessageElement.style.display = 'none';
+                return;
+            }
+
+            if (searchKeywords.length > 0 && searchKeywords[0].trim() != '' && searchKeywords.length < 3) {
+                errorMessageElement.textContent = "Search keyword must have 3 arguments (mail category year)";
+                errorMessageElement.style.display = 'block';
+                successMessageElement.style.display = 'none';
+                return;
+            }
+
+            // Loop through each document row
+            $('.document-row').each(function() {
                 const userEmail = $(this).closest('.user-email').text().trim().toLowerCase(); // Updated line
                 const documentYear = $(this).closest('.year').find('span').text().trim().toLowerCase(); // New line
                 const documentCategory = $(this).closest('.category').text().trim().toLowerCase(); // New line
 
 
-                // Check if query matches document name or user email
-                if (documentName.includes(query) || userEmail.includes(query) || documentYear.includes(query) || documentCategory.includes(query)) {
-                    results.push($(this).prop('outerHTML')); // Add matching row HTML to results
+                // Check if query matches user email and category and year
+                if (
+                    userEmail.includes(searchKeywords[0]) &&
+                    documentCategory.includes(searchKeywords[1]) &&
+                    documentYear.includes(searchKeywords[2])
+                ) {
+                    // Append the matching row HTML to results
+                    searchResultsContainer.append($(this).clone());
                 }
             });
 
-            // Update search results container
-            const searchResultsContainer = $('#search-results');
-            if (results.length > 0) {
-                searchResultsContainer.html(results.join(''));
+            if (searchResultsContainer.children().length > 0) {
                 searchResultsContainer.slideDown(); // Slide down search results box
             } else {
                 searchResultsContainer.html('<p>No matching documents found.</p>');
-                searchResultsContainer.slideDown(); // Slide down search results box
+                searchResultsContainer.slideUp(); // Slide up search results box
             }
         }
-        function performSearchStrict(searchKeywords) {
-            const results = [];
+    });
 
-            if (searchKeywords.length < 3) {
-                errorMessageElement.textContent = "Search keyword must have 3 arguments (mail category year)";
-                errorMessageElement.style.display = 'block';
-                successMessageElement.style.display = 'none';
-            }
-
-            // Loop through each document row
-            $('.document-row').each(function() {
-                    const userEmail = $(this).closest('.user-email').text().trim().toLowerCase(); // Updated line
-                    const documentYear = $(this).closest('.year').find('span').text().trim().toLowerCase(); // New line
-                    const documentCategory = $(this).closest('.category').text().trim().toLowerCase(); // New line
-
-
-                    // Check if query matches document name or user email
-                    if (userEmail.includes(searchKeywords[0]) && documentCategory.includes(searchKeywords[1]) && documentYear.includes(searchKeywords[2])) {
-                        results.push($(this).prop('outerHTML')); // Add matching row HTML to results
-                    }
-                });
-
-                // Update search results container
-                const searchResultsContainer = $('#search-results');
-                if (results.length > 0) {
-                    searchResultsContainer.html(results.join(''));
-                    searchResultsContainer.slideDown(); // Slide down search results box
-                } else {
-                    searchResultsContainer.html('<p>No matching documents found.</p>');
-                    searchResultsContainer.slideDown(); // Slide down search results box
-                }
-            }
-        });
     </script>
     <script>
         const errorMessageElement = document.getElementById('error-message');
