@@ -1,6 +1,6 @@
 import threading
 import datetime
-import urllib.parse
+import io
 from init_secret import generate_token
 from validate_email_address import validate_email
 from flask import (
@@ -12,6 +12,7 @@ from flask import (
     session,
     jsonify,
     send_from_directory,
+    make_response
 )
 import firebase_admin
 from functools import wraps
@@ -241,7 +242,6 @@ def prepare_query_snapshot(query_snapshot, domains, unique_document_names):
                 category_dict['documents'].append(document_data)
             unique_document_names.add(document_name)
 
-    print(domains)
     return domains
 
 
@@ -341,12 +341,6 @@ def delete_document():
         response = {'success': False, 'error': str(e)}
 
     return jsonify(response)
-
-
-@app.route('/logo/<path:filename>')
-@login_required
-def logo(filename):
-    return send_from_directory('images', filename)
 
 
 @app.route('/clear_error_message', methods=['POST'])
@@ -694,6 +688,40 @@ def clean_directory(directory_path):
         except Exception as e:
             return f"Failed to delete {file_path}. Reason: {e}"
     return 'success'
+
+
+@app.route('/download', methods=['GET'])
+@login_required
+def download_document():
+    document_url = request.args.get('documentUrl')
+    document_name = request.args.get('documentName')
+
+    file_extension = os.path.splitext(document_name)[1].lower()[1:]
+
+    if not file_extension:
+        return jsonify({'error': 'Invalid file extension in the document name'}), 400
+
+    headers = {
+        'Access-Control-Allow-Origin': '*'
+    }
+
+    try:
+        response = requests.get(document_url, headers=headers)
+
+        if response.status_code == 200:
+            flask_response = make_response(response.content)
+            flask_response.headers['Content-Type'] = 'application/' + file_extension
+            flask_response.headers[
+                'Content-Disposition'] = f'attachment; filename="{document_name}"'
+            flask_response.headers['Access-Control-Allow-Origin'] = '*'
+            return flask_response
+        elif response.status_code == 404:
+            return jsonify({'error': 'Document not found'}), 404
+        else:
+            return jsonify({'error': 'Failed to download document'}), 500
+
+    except Exception as e:
+        return jsonify({'error': f'Download failed: {str(e)}'}), 500
 
 
 @app.route('/handle_selection', methods=['POST'])

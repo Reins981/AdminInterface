@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TLK Admin Interface</title>
+    <title>PuraVida Admin Interface</title>
     <!-- Include jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Include Bootstrap CSS -->
@@ -27,16 +27,37 @@
         cursor: pointer;
     }
 
+    /* Styling for the badge */
+    .user-count-badge {
+        background-color: #3498db;
+        color: yellow;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-left: 40px; /* Adjust the margin to separate it from the logo */
+        font-size: 50px;
+        box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.3); /* Elevation */
+        font-weight: bold;
+        text-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+    }
+
+
     .btn-primary:hover {
         box-shadow: 0 0 5px 5px rgba(255, 204, 0, 0.7); /* Yellow shadow on hover */
     }
 
-    /* Style danger buttons */
+    .user-count-badge:hover {
+        box-shadow: 0 0 5px 5px rgba(255, 204, 0, 0.7); /* Yellow shadow on hover */
+    }
+
     .btn-danger {
         background-color: #e74c3c;
         color: white;
         border: none;
-        padding: 10px 20px;
+        padding: 10px 23px;
         font-size: 16px;
         border-radius: 5px;
         cursor: pointer;
@@ -159,8 +180,10 @@
     <div class="container">
         <div class="py-4">
             <!-- Add logo at the top right corner -->
-            <div class="d-flex justify-content-end">
-                <img src="../images/logo.jpg" alt="Logo" height="100">
+            {%  set current_users = users|length %}
+            <div class="d-flex justify-content-end align-items-center">
+                <span class="user-count-badge mr-2" id="userCountBadge">{{ current_users }}</span>
+                <img src="../images/logo.png" alt="Logo" height="100">
             </div>
             <div class="left-logout">
                     <!-- Display logout link if authenticated -->
@@ -203,10 +226,11 @@
                     <label for="domain">Domain:</label>
                     <select name="domain" class="form-control" required>
                         {% if session['role'] == 'super_admin' %}
-                            <option value="TLK-ALL">TLK-ALL</option>
-                            <option value="TLK-IBK">TLK-IBK</option>
-                            <option value="TLK-IBK-L">TLK-IBK-L</option>
-                            <option value="TLK-IM">TLK-IM</option>
+                            <option value="PV-ALL">PV-ALL</option>
+                            <option value="PV-IBK">PV-IBK</option>
+                            <option value="PV-IBK-L">PV-IBK-L</option>
+                            <option value="PV-IM">PV-IM</option>
+                            <option value="PV-EXT">PV-EXT</option>
                         {% else %}
                             <option value="{{ session['admin_domain'] }}">{{ session['admin_domain'] }}</option>
                         {% endif %}
@@ -330,15 +354,15 @@
                                 <input type="hidden" name="uid" value="{{ user.uid }}">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <select class="newRoleDropdown" style="width: 150px;">
-                                        {% if user.custom_claims and 'domain' in user.custom_claims and user.custom_claims['domain'] == 'TLK-ALL' %}
+                                        {% if user.custom_claims and 'domain' in user.custom_claims and user.custom_claims['domain'] == 'PV-ALL' %}
                                             disabled
                                         {% endif %}
                                         <option value="admin">Admin</option>
                                         <option value="client">Client</option>
                                     </select>
                                     <div class="input-group-append">
-                                        <!-- Disable the "Update" button if the user's domain is "TLK-ALL" -->
-                                        {% if user.custom_claims and 'domain' in user.custom_claims and user.custom_claims['domain'] == 'TLK-ALL' %}
+                                        <!-- Disable the "Update" button if the user's domain is "PV-ALL" -->
+                                        {% if user.custom_claims and 'domain' in user.custom_claims and user.custom_claims['domain'] == 'PV-ALL' %}
                                         <button type="submit" class="btn btn-success ml-2" disabled>Update</button>
                                         {% else %}
                                         <button type="submit" class="btn btn-success ml-2">Update</button>

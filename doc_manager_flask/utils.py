@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from firebase_admin import (
     firestore,
     auth,
@@ -11,10 +12,11 @@ from enum import Enum
 
 
 class Domains(Enum):
-    ALL = "TLK-ALL"
-    IBK = "TLK-IBK"
-    IBK_L = "TLK-IBK-L"
-    IM = "TLK-IM"
+    ALL = "PV-ALL"
+    IBK = "PV-IBK"
+    IBK_L = "PV-IBK-L"
+    IM = "PV-IM"
+    EXT = "PV-EXT"
 
 
 BASE_PATH_SA = os.path.join(
@@ -41,6 +43,11 @@ MAIL_SETTINGS = os.path.join(
     BASE_PATH_SA,
     "mail_settings.json"
 )
+
+
+def sanitize_filename(filename):
+    # Replace invalid characters with underscores
+    return re.sub(r'[\/:*?"<>|]', '_', filename)
 
 
 def parse_client_setting_from_json(json_file_path, key):
