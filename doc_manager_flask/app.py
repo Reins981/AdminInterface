@@ -134,14 +134,14 @@ def login():
 
                 role = user.custom_claims.get('role', None)
                 verified = user.custom_claims.get('verified', None)
-                admin_domain = user.custom_claims.get('domain', None)
+                user_domain = user.custom_claims.get('domain', None)
                 if role and (role == 'admin' or role == 'super_admin'):
                     if verified:
                         session.clear()
                         session['user_id'] = user.uid
                         session['display_name'] = user.display_name
                         session['role'] = role
-                        session['admin_domain'] = admin_domain
+                        session['domain'] = user_domain
                         return redirect(url_for('index'))
                     else:
                         error_message = f"User {user.display_name} is not verified!"
@@ -249,8 +249,8 @@ def prepare_query_snapshot(query_snapshot, domains, unique_document_names):
 @login_required
 def document_history():
     try:
-        admin_domain = session.get('admin_domain', None)
-        if not admin_domain:
+        user_domain = session.get('domain', None)
+        if not user_domain:
             return render_template('history.html', error_message="Admin domain not found")
 
         # Use a set to keep track of unique document names
@@ -258,7 +258,7 @@ def document_history():
         # Entry point
         domains = list()
 
-        if admin_domain == Domains.ALL.value:
+        if user_domain == Domains.ALL.value:
             # Get a list of all collections
             collections = [col.id for col in db.collections()]
             for collection in collections:
@@ -273,7 +273,7 @@ def document_history():
                 sort_domains(domains)
 
         else:
-            documents_ref = db.collection("_".join(("documents", admin_domain.lower())))
+            documents_ref = db.collection("_".join(("documents", user_domain.lower())))
             query_snapshot = documents_ref.get()
 
             # Prepare the query snapshot and return the domains entry point
