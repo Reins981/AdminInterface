@@ -1,6 +1,5 @@
 import threading
 import datetime
-import io
 from init_secret import generate_token
 from validate_email_address import validate_email
 from flask import (
@@ -11,9 +10,9 @@ from flask import (
     url_for,
     session,
     jsonify,
-    send_from_directory,
     make_response
 )
+import jwt
 import firebase_admin
 from functools import wraps
 import os
@@ -89,7 +88,26 @@ def before_request():
         )
 
 
-# Authentication decorator
+# Authentication decorator for requests sent from the Clients App
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+
+        if not token:
+            return jsonify({'message': 'Token is missing!'}), 401
+
+        try:
+            _ = jwt.decode(token, app.secret_key, algorithms=["HS256"])
+        except:
+            return jsonify({'message': 'Token is invalid!'}), 401
+
+        return f(*args, **kwargs)
+
+    return decorated
+
+
+# Authentication decorator for login checks within the Web Application
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -996,6 +1014,29 @@ def handle_selection_specific():
                     break
 
     return jsonify(response_data)
+
+
+@app.route('/get_signed_url', methods=['POST'])
+@token_required
+def get_signed_url():
+    if request.method == 'POST':
+        document_path = request.json.get(
+            'document_path')  # Assuming Flutter sends JSON data with 'document_path'
+
+        bucket = storage.bucket()
+
+        blob = bucket.blob(document_path)
+
+        # Calculate the current datetime
+        current_datetime = datetime.datetime.utcnow()
+
+        # Calculate the expiration datetime by adding 50 years to the current datetime
+        expiration_datetime = current_datetime + datetime.timedelta(days=30 * 365)
+
+        # Get the download URL of the uploaded document
+        document_url = blob.generate_signed_url(expiration=expiration_datetime)
+
+        return jsonify({'signed_url': document_url})
 
 
 if __name__ == '__main__':
