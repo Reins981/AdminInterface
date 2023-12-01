@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>PuraVida Admin Interface</title>
+    <title>SecDocAdmin</title>
     <!-- Include jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Include Bootstrap CSS -->
@@ -183,7 +183,9 @@
             {%  set current_users = users|length %}
             <div class="d-flex justify-content-end align-items-center">
                 <span class="user-count-badge mr-2" id="userCountBadge">{{ current_users }}</span>
-                <img src="../images/logo.png" alt="Logo" height="100">
+                <div class="d-flex flex-column">
+                    <img src="../images/logo.png" alt="Logo" height="100" class="ml-2">
+                </div>
             </div>
             <div class="left-logout">
                     <!-- Display logout link if authenticated -->
