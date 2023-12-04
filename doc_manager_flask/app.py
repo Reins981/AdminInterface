@@ -521,10 +521,7 @@ def create_custom_claims_for_user():
     try:
         data = request.get_json()
         uid = data.get('uid')
-        custom_claims_str = data.get('customClaims')
-
-        # Convert custom claims string back to dictionary
-        custom_claims = eval(custom_claims_str)
+        custom_claims = data.get('customClaims')
 
         # Set custom claims for the user
         auth.set_custom_user_claims(uid, custom_claims)
