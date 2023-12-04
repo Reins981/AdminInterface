@@ -377,6 +377,58 @@ def clear_success_message():
     return ''
 
 
+def __generate_verification_link_from_verification_token(user, verification_token):
+    current_custom_claims = user.custom_claims
+    # Calculate the expiration timestamp (e.g., 24 hours from now)
+    expiration_time = datetime.datetime.now() + datetime.timedelta(hours=1)
+
+    if current_custom_claims and 'verification_token' in current_custom_claims:
+        current_custom_claims['verification_token'] = verification_token
+        current_custom_claims['verification_token_expiration'] = expiration_time.timestamp()
+        auth.set_custom_user_claims(user.uid, current_custom_claims)
+
+        # Include the verification token as a parameter in the link
+        verification_link = url_for('verify_email',
+                                    token=verification_token,
+                                    email=user.email,
+                                    _external=True)
+        # Send email with verification_link to the user's email address
+        print(verification_link)
+        return 'success', verification_link
+    return 'failed', None
+
+
+# Method for sending verification email for a client that registered using the app
+def __send_verification_email_for_app(email):
+    error = False
+    error_message = None
+    user = None
+    try:
+        # Generate a random verification token
+        verification_token = generate_token()
+
+        user = auth.get_user_by_email(email)
+        response, verification_link = __generate_verification_link_from_verification_token(
+            user,
+            verification_token)
+
+        if response == "success":
+            status, msg = send_verify_user_mail(user.display_name, verification_link, email)
+            if status != 'success':
+                error = True
+                error_message = msg
+
+    except Exception as e:
+        error = True
+        error_message = str(e)
+
+    # Make sure the user is deleted in case email sending fails due to various reasons
+    if error and user:
+        delete_user(user.uid)
+
+    return error_message if error else 'success'
+
+
 # Endpoint for sending verification email
 @app.route('/send_verification_email', methods=['GET'])
 @login_required
@@ -389,23 +441,12 @@ def send_verification_email():
         # Generate a random verification token
         verification_token = generate_token()
 
-        # Calculate the expiration timestamp (e.g., 24 hours from now)
-        expiration_time = datetime.datetime.now() + datetime.timedelta(hours=1)
-
         user = auth.get_user_by_email(email)
-        current_custom_claims = user.custom_claims
-        if current_custom_claims and 'verification_token' in current_custom_claims:
-            current_custom_claims['verification_token'] = verification_token
-            current_custom_claims['verification_token_expiration'] = expiration_time.timestamp()
-            auth.set_custom_user_claims(user.uid, current_custom_claims)
+        response, verification_link = __generate_verification_link_from_verification_token(
+            user,
+            verification_token)
 
-            # Include the verification token as a parameter in the link
-            verification_link = url_for('verify_email',
-                                        token=verification_token,
-                                        email=email,
-                                        _external=True)
-            # Send email with verification_link to the user's email address
-            print(verification_link)
+        if response == "success":
             status, msg = send_verify_user_mail(user.display_name, verification_link, email)
             if status != 'success':
                 error = True
@@ -473,6 +514,33 @@ def verify_email(token):
         render_template('login.html', error_message=message))
 
 
+# Endpoint to handle the create_custom_claims_for_app request from the client app
+@app.route('/create_custom_claims_for_app', methods=['POST'])
+@token_required
+def create_custom_claims_for_app():
+    try:
+        data = request.get_json()
+        uid = data.get('uid')
+        custom_claims_str = data.get('customClaims')
+
+        # Convert custom claims string back to dictionary
+        custom_claims = eval(custom_claims_str)
+
+        # Set custom claims for the user
+        auth.set_custom_user_claims(uid, custom_claims)
+
+        user = auth.get_user(uid)
+
+        result = __send_verification_email_for_app(email=user.email)
+
+        if result != "success":
+            return jsonify({'error': result}), 500
+        else:
+            return jsonify({'message': 'User created successfully'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/create_user', methods=['POST'])
 @login_required
 def create_user():
@@ -504,7 +572,8 @@ def create_user():
         results = list(filter(lambda x: x.custom_claims['domain'] == Domains.ALL.value, users))
         if len(results) > allowed_number:
             # Store the error message in the session
-            session['error_message'] = f"Maximum allowed number of Super Users is {allowed_number}!"
+            session[
+                'error_message'] = f"Maximum allowed number of Super Users is {allowed_number}!"
             return redirect(url_for('index'))
 
         # Create a new user with email and password
