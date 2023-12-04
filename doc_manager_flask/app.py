@@ -514,10 +514,10 @@ def verify_email(token):
         render_template('login.html', error_message=message))
 
 
-# Endpoint to handle the create_custom_claims_for_app request from the client app
-@app.route('/create_custom_claims_for_app', methods=['POST'])
+# Endpoint to handle the create_custom_claims_for_user request from the client app
+@app.route('/create_custom_claims_for_user', methods=['POST'])
 @token_required
-def create_custom_claims_for_app():
+def create_custom_claims_for_user():
     try:
         data = request.get_json()
         uid = data.get('uid')
