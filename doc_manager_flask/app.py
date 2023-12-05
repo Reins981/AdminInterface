@@ -704,6 +704,12 @@ def current_user_domain(session_lookup=True, current_user=None):
     # Get the current user's custom claims, including the domain
     custom_claims = current_user.custom_claims
 
+    # FATAL error handling! A user without custom claims must never occur!!
+    if custom_claims is None:
+        # Delete the user
+        auth.delete_user(current_user.uid)
+        return f'FATAL: User {current_user.uid} was corrupted and no longer exists!'
+
     return custom_claims.get('domain', None)
 
 
@@ -722,7 +728,7 @@ def fetch_users_by_domain(domain):
     if not domain:
         return 'Could not find domain for current user'
 
-    if 'ERROR:' in domain:
+    if 'ERROR:' in domain or 'FATAL:' in domain:
         error_message = domain
         return error_message
 
@@ -736,16 +742,22 @@ def fetch_users_by_domain(domain):
             for user in user_records:
                 # Access user's custom claims to check for domain
                 user_domain = current_user_domain(False, user)
+                # A fatal error has occurred for the user
+                if 'FATAL:' in user_domain:
+                    continue
+                # Users not assigned to a domain won`t be displayed
                 if user_domain is None:
                     user_domain = 'N/A'
                 if user_domain not in users_by_domain:
                     users_by_domain[user_domain] = []
                 users_by_domain[user_domain].append(user)
-
             return sort_users(users_by_domain)
 
         for user in user_records:
             user_domain = current_user_domain(False, user)
+            # A fatal error has occurred for the user
+            if 'FATAL:' in user_domain:
+                continue
             # Users not assigned to a domain won`t be displayed
             if user_domain is None:
                 continue
