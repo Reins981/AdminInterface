@@ -723,6 +723,17 @@ def sort_users(users_by_domain: dict):
     return [user for domain_users in users_by_domain.values() for user in domain_users]
 
 
+@app.route('/get_all_users', methods=['GET'])
+@token_required
+def get_all_users():
+    try:
+        user_records = auth.list_users()
+        users = [user.to_dict() for user in user_records.users]
+        return jsonify({'users': users}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @login_required
 def fetch_users_by_domain(domain):
     if domain is False:
