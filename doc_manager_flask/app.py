@@ -152,9 +152,10 @@ def login():
 
                 role = user.custom_claims.get('role', None)
                 verified = user.custom_claims.get('verified', None)
+                disabled = user.custom_claims.get('disabled', True)
                 user_domain = user.custom_claims.get('domain', None)
                 if role and (role == 'admin' or role == 'super_admin'):
-                    if verified:
+                    if verified and not disabled:
                         session.clear()
                         session['user_id'] = user.uid
                         session['display_name'] = user.display_name
@@ -162,7 +163,9 @@ def login():
                         session['domain'] = user_domain
                         return redirect(url_for('index'))
                     else:
-                        error_message = f"User {user.display_name} is not verified!"
+                        error_message = \
+                            f"User {user.display_name} is not verified!" \
+                            if not verified else f"User {user.display_name} is disabled!"
                         return render_template('login.html', error_message=error_message)
                 else:
                     error_message = "Only admin users are authorized to log in."
