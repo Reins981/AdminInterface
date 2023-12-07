@@ -477,7 +477,12 @@
             if (tableRow) {
                 if (updateString == "UpdateUserStatus") {
                     const disabledCell = tableRow.querySelector('.disabled-cell');
-                    disabledCell.textContent = user.disabled ? 'Yes' : 'No';
+                    // Update the content and apply styling
+                    if (user.disabled) {
+                        disabledCell.innerHTML = '<div class="red-box">Yes</div>';
+                    } else {
+                        disabledCell.textContent = 'No';
+                    }
                 } else {
                     const rowCell = tableRow.querySelector('.row-cell');
                     rowCell.textContent = user.role
