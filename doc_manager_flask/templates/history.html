@@ -30,6 +30,11 @@
             padding-top: 20px;
         }
 
+        /* CSS for Collapse/Expand */
+            .collapsed {
+            display: none;
+        }
+
         .btn-primary {
             background-color: #3498db;
             color: white;
@@ -99,8 +104,7 @@
 
         .tree li.opened > ul {
             display: block;
-            max-height: 1000px; /* Set a maximum height for the open element */
-            overflow: hidden; /* Hide any content that overflows */
+            overflow: auto; /* Hide any content that overflows */
             transition: max-height 0.3s ease-in-out; /* Add transition for max-height */
         }
 
@@ -204,8 +208,8 @@
     <ul class="tree">
     {% for domain in domains %}
         <li class="domain">
-            {{ domain.get('name') }}
-            <ul>
+            <span class="toggle" onclick="toggleCollapse(this)">{{ domain.get('name') }}</span>
+            <ul class="collapsed">
                 {% set documents_by_year = {} %}
                 {% for category in domain.get('categories') %}
                     {% for document in category.documents %}
@@ -521,5 +525,12 @@
         document.getElementById('error-message').style.display = 'none';
     </script>
     {% endif %}
+    <script>
+        // JavaScript function to toggle collapse/expand
+        function toggleCollapse(element) {
+            const ul = element.nextElementSibling;
+            ul.classList.toggle('collapsed');
+        }
+    </script>
 </body>
 </html>
