@@ -205,96 +205,99 @@
     <div class="alert alert-success" id="success-message" style="display: none;">
         Document(s) deleted successfully!
     </div>
-    <ul class="tree">
-    {% for domain in domains %}
-        <li class="domain">
-            <span class="toggle" onclick="toggleCollapse(this)">{{ domain.get('name') }}</span>
-            <ul class="collapsed">
-                {% set documents_by_year = {} %}
-                {% for category in domain.get('categories') %}
-                    {% for document in category.documents %}
-                        {% set year = document.get('year') %}
-                        {% if year not in documents_by_year %}
-                            {% set _ = documents_by_year.update({year: []}) %}
-                        {% endif %}
-                        {% set _ = documents_by_year[year].append(document) %}
-                    {% endfor %}
-                {% endfor %}
-
-                {% for year, documents in documents_by_year.items() %}
-                    <li class="year">
-                        <span>{{ year }}</span>
-                        <ul>
-                            {% set documents_by_category = {} %}
-                            {% for document in documents %}
-                                {% set category_name = document.get('category') %}
-                                {% if category_name not in documents_by_category %}
-                                    {% set _ = documents_by_category.update({category_name: []}) %}
+    <div class="card shadow">
+        <div class="card-body">
+            <ul class="tree">
+            {% for domain in domains %}
+                <li class="domain">
+                    <span class="toggle" onclick="toggleCollapse(this)">{{ domain.get('name') }}</span>
+                    <ul class="collapsed">
+                        {% set documents_by_year = {} %}
+                        {% for category in domain.get('categories') %}
+                            {% for document in category.documents %}
+                                {% set year = document.get('year') %}
+                                {% if year not in documents_by_year %}
+                                    {% set _ = documents_by_year.update({year: []}) %}
                                 {% endif %}
-                                {% set _ = documents_by_category[category_name].append(document) %}
+                                {% set _ = documents_by_year[year].append(document) %}
                             {% endfor %}
+                        {% endfor %}
 
-                            {% for category_name, category_documents in documents_by_category.items() %}
-                                <li class="category">
-                                    {{ category_name }}
-                                    <ul>
-                                        {% set documents_by_user = {} %}
-                                        {% for document in category_documents %}
-                                            {% set user_email = document.get('user_email') %}
-                                            {% set user_name = document.get('user_name') %}
-                                            {% if (user_email, user_name) not in documents_by_user %}
-                                                {% set _ = documents_by_user.update({(user_email, user_name): []}) %}
-                                            {% endif %}
-                                            {% set _ = documents_by_user[(user_email, user_name)].append(document) %}
-                                        {% endfor %}
+                        {% for year, documents in documents_by_year.items() %}
+                            <li class="year">
+                                <span>{{ year }}</span>
+                                <ul>
+                                    {% set documents_by_category = {} %}
+                                    {% for document in documents %}
+                                        {% set category_name = document.get('category') %}
+                                        {% if category_name not in documents_by_category %}
+                                            {% set _ = documents_by_category.update({category_name: []}) %}
+                                        {% endif %}
+                                        {% set _ = documents_by_category[category_name].append(document) %}
+                                    {% endfor %}
 
-                                        {% for user, user_documents in documents_by_user.items() %}
-                                            <li class="user-email">{{ user[0] ~ ' (' ~ user[1] ~ ')' }}
-                                                <ul>
-                                                    {% for document in user_documents %}
-                                                        <li class="document-row" data-document-id="{{ document.document_id }}" data-new="{{ document.is_new }}">
-                                                            <span class="document-text">Document:</span>
-                                                            <ul>
-                                                                <li class="document-name">{{ document.document_name }}
-                                                                    <br><span style="margin-left: 20px;" class="last-update">Last Update: {{ document.last_update }}</span>
-                                                                    <br><span style="margin-left: 20px;" class="new-document">Document Status: {% if document.is_new %} New {% else %} Update {% endif %}</span>
-                                                                    <br><span style="margin-left: 20px;" class="document-type">Document Type: {{ category_name }}</span>
+                                    {% for category_name, category_documents in documents_by_category.items() %}
+                                        <li class="category">
+                                            {{ category_name }}
+                                            <ul>
+                                                {% set documents_by_user = {} %}
+                                                {% for document in category_documents %}
+                                                    {% set user_email = document.get('user_email') %}
+                                                    {% set user_name = document.get('user_name') %}
+                                                    {% if (user_email, user_name) not in documents_by_user %}
+                                                        {% set _ = documents_by_user.update({(user_email, user_name): []}) %}
+                                                    {% endif %}
+                                                    {% set _ = documents_by_user[(user_email, user_name)].append(document) %}
+                                                {% endfor %}
+
+                                                {% for user, user_documents in documents_by_user.items() %}
+                                                    <li class="user-email">{{ user[0] ~ ' (' ~ user[1] ~ ')' }}
+                                                        <ul>
+                                                            {% for document in user_documents %}
+                                                                <li class="document-row" data-document-id="{{ document.document_id }}" data-new="{{ document.is_new }}">
+                                                                    <span class="document-text">Document:</span>
+                                                                    <ul>
+                                                                        <li class="document-name">{{ document.document_name }}
+                                                                            <br><span style="margin-left: 20px;" class="last-update">Last Update: {{ document.last_update }}</span>
+                                                                            <br><span style="margin-left: 20px;" class="new-document">Document Status: {% if document.is_new %} New {% else %} Update {% endif %}</span>
+                                                                            <br><span style="margin-left: 20px;" class="document-type">Document Type: {{ category_name }}</span>
+                                                                        </li>
+                                                                    </ul>
+                                                                    <button class="btn btn-danger"
+                                                                            data-document-id="{{ document.document_id }}"
+                                                                            data-document-domain="{{ domain.name }}"
+                                                                            data-document-category="{{ category_name }}"
+                                                                            data-document-email="{{ document.user_email }}"
+                                                                            onclick="deleteDocument(
+                                                                                '{{ document.document_id }}',
+                                                                                '{{ document.document_name }}',
+                                                                                '{{ document.year }}',
+                                                                                '{{ domain.name }}',
+                                                                                '{{ category_name }}',
+                                                                                '{{ document.user_email }}'
+                                                                            )">Delete</button>
+                                                                    <button class="btn btn-success ml-2"
+                                                                            data-document-id="{{ document.document_id }}"
+                                                                            onclick="downloadDocument(
+                                                                                '{{ document.document_name }}',
+                                                                                '{{ document.document_url }}',
+                                                                            )">Download</button>
                                                                 </li>
-                                                            </ul>
-                                                            <button class="btn btn-danger"
-                                                                    data-document-id="{{ document.document_id }}"
-                                                                    data-document-domain="{{ domain.name }}"
-                                                                    data-document-category="{{ category_name }}"
-                                                                    data-document-email="{{ document.user_email }}"
-                                                                    onclick="deleteDocument(
-                                                                        '{{ document.document_id }}',
-                                                                        '{{ document.document_name }}',
-                                                                        '{{ document.year }}',
-                                                                        '{{ domain.name }}',
-                                                                        '{{ category_name }}',
-                                                                        '{{ document.user_email }}'
-                                                                    )">Delete</button>
-                                                            <button class="btn btn-success ml-2"
-                                                                    data-document-id="{{ document.document_id }}"
-                                                                    onclick="downloadDocument(
-                                                                        '{{ document.document_name }}',
-                                                                        '{{ document.document_url }}',
-                                                                    )">Download</button>
-                                                        </li>
-                                                    {% endfor %}
-                                                </ul>
-                                            </li>
-                                        {% endfor %}
-                                    </ul>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    </li>
-                {% endfor %}
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </li>
+                                                {% endfor %}
+                                            </ul>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            {% endfor %}
             </ul>
-        </li>
-    {% endfor %}
-    </ul>
+        </div>
     </div>
 
     <!-- Include jQuery -->

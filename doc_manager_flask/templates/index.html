@@ -63,6 +63,20 @@
         cursor: pointer;
     }
 
+    .custom-yellow-btn {
+        background-color: rgba(255, 204, 0, 0.7);
+        color: black; /* Adjust the text color for better contrast */
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .custom-yellow-btn:hover {
+        background-color: rgba(255, 204, 0, 1); /* Adjust hover color */
+    }
+
     /* Style for the red box */
     .red-box {
         display: inline-block;
@@ -374,9 +388,9 @@
                                     <div class="input-group-append">
                                         <!-- Disable the "Update" button if the user's domain is "PV-ALL" -->
                                         {% if user.custom_claims and 'domain' in user.custom_claims and user.custom_claims['domain'] == 'PV-ALL' %}
-                                        <button type="submit" class="btn btn-success ml-2" disabled>Update</button>
+                                        <button type="submit" class="btn btn-warning ml-2" disabled>Update</button>
                                         {% else %}
-                                        <button type="submit" class="btn btn-success ml-2">Update</button>
+                                        <button type="submit" class="custom-yellow-btn ml-2">Update</button>
                                         {% endif %}
                                     </div>
                                 </div>
