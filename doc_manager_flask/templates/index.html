@@ -63,6 +63,15 @@
         cursor: pointer;
     }
 
+    /* Style for the red box */
+    .red-box {
+        display: inline-block;
+        padding: 8px 8px;
+        color: #ffffff; /* White text */
+        background-color: #ff0000; /* Red color */
+        border-radius: 4px; /* Rounded corners */
+    }
+
     /* Style success buttons */
     .btn-success {
         background-color: #2ecc71;
@@ -155,8 +164,8 @@
 
     /* Define the dot styles */
     .dot {
-        width: 10px;
-        height: 10px;
+        width: 20px;
+        height: 20px;
         border-radius: 50%;
         display: inline-block;
         margin-right: 5px;
@@ -327,7 +336,7 @@
                         <td class="disabled-cell">
                             <!-- Display the disabled status -->
                             {% if user.disabled %}
-                                Yes
+                                <div class="red-box">Yes</div>
                             {% else %}
                                 No
                             {% endif %}
