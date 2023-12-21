@@ -159,6 +159,7 @@ def login():
                         session.clear()
                         session['user_id'] = user.uid
                         session['display_name'] = user.display_name
+                        session['email'] = email
                         session['role'] = role
                         session['domain'] = user_domain
                         return redirect(url_for('index'))
@@ -881,6 +882,8 @@ def handle_selection():
         try:
             pool.add_task(
                 upload_document,
+                session['email'] if session else "Default",
+                session['role'] if session else "Default",
                 db,
                 selected_user_uid,
                 selected_email,
@@ -1013,6 +1016,8 @@ def handle_selection_specific():
                 else:
                     pool.add_task(
                         upload_document,
+                        session['email'] if session else "Default",
+                        session['role'] if session else "Default",
                         db,
                         selected_user_uid,
                         selected_email,

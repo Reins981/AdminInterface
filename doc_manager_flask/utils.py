@@ -167,7 +167,7 @@ def get_dict_based_on_value_from_dict(key, list_of_dicts, target_value):
     return None
 
 
-def upload_document(db, user_id, user_email, user_domain, category, file_path):
+def upload_document(from_email, from_role, db, user_id, user_email, user_domain, category, file_path):
     if file_path:
         try:
             document_name = os.path.basename(file_path)
@@ -206,6 +206,8 @@ def upload_document(db, user_id, user_email, user_domain, category, file_path):
                     document_url = blob.generate_signed_url(expiration=expiration_datetime)
 
                     new_document = {
+                        "from_email": from_email,
+                        "from_role": from_role,
                         "user_name": user_name,
                         "user_email": user_email,
                         "owner": user_id,
