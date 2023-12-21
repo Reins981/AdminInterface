@@ -883,6 +883,7 @@ def handle_selection():
             pool.add_task(
                 upload_document,
                 session['email'] if session else "Default",
+                session['display_name'] if session else "Default",
                 session['role'] if session else "Default",
                 db,
                 selected_user_uid,
@@ -1017,6 +1018,7 @@ def handle_selection_specific():
                     pool.add_task(
                         upload_document,
                         session['email'] if session else "Default",
+                        session['display_name'] if session else "Default",
                         session['role'] if session else "Default",
                         db,
                         selected_user_uid,
