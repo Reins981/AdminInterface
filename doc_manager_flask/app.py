@@ -23,7 +23,8 @@ from firebase_admin import (
     credentials,
     auth,
     firestore,
-    storage
+    storage,
+    messaging
 )
 from utils import (
     get_url_for_firebase_auth,
@@ -121,6 +122,56 @@ def login_required(f):
 @login_required
 def is_valid_email(email):
     return validate_email(email)
+
+
+@app.route('/register_token', methods=['POST'])
+@token_required
+def register_token():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    token = data.get('token')
+
+    if not user_id or not token:
+        return jsonify({'message': 'Missing data'}), 400
+
+    try:
+        # Store the token in Firestore
+        db.collection('users').document(user_id).set({
+            'fcm_token': token
+        }, merge=True)
+
+        return jsonify({'message': 'Token registered successfully'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+def send_push_notification(user_id, title, body):
+    try:
+        user_doc_ref = db.collection('users').document(user_id)
+        user_doc = user_doc_ref.get()
+
+        if not user_doc.exists:
+            return f"User {user_id} does not exist in users collection"
+
+        user_data = user_doc.to_dict()
+        token = user_data.get("fcm_token")
+        if not token:
+            return f"No FCM token found for user {user_id}"
+
+        # Message content
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title=title,
+                body=body,
+            ),
+            token=token,
+        )
+
+        # Send a message
+        response = messaging.send(message)
+        return f'Successfully sent message: {response}'
+    except Exception as e:
+        return f'Error sending push notification: {str(e)}'
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -892,6 +943,12 @@ def handle_selection():
                 category,
                 temp_file_path,
             )
+            result = send_push_notification(
+                selected_user_uid,
+                "New Document",
+                "A new document has been added!")
+            if result != "success":
+                print(result)
         except Exception as e:
             response_data = {
                 'success': False,
@@ -1027,6 +1084,12 @@ def handle_selection_specific():
                         category,
                         temp_file_path,
                     )
+                    result = send_push_notification(
+                        selected_user_uid,
+                        "New Document",
+                        "A new document has been added!")
+                    if result != "success":
+                        print(result)
             except Exception as e:
                 response_data = {
                     'success': False,
