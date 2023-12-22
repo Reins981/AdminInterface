@@ -145,6 +145,26 @@ def register_token():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/push_notification', methods=['POST'])
+@token_required
+def push_notification():
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    if not user_id:
+        return jsonify({'message': 'Missing data'}), 400
+
+    try:
+        result = send_push_notification(
+            user_id,
+            "New Document(s)",
+            "New document(s) have been added!")
+        return (jsonify({'message': 'Push notification sent successfully'}), 200
+                if result == 'success' else jsonify({'error': result}), 500)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 def send_push_notification(user_id, title, body):
     try:
         user_doc_ref = db.collection('users').document(user_id)
@@ -217,7 +237,7 @@ def login():
                     else:
                         error_message = \
                             f"User {user.display_name} is not verified!" \
-                            if not verified else f"User {user.display_name} is disabled!"
+                                if not verified else f"User {user.display_name} is disabled!"
                         return render_template('login.html', error_message=error_message)
                 else:
                     error_message = "Only admin users are authorized to log in."
