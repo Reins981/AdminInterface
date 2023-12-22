@@ -946,7 +946,7 @@ def handle_selection():
             result = send_push_notification(
                 selected_user_uid,
                 "New Document",
-                "A new document has been added!")
+                f"{document_name} has been added!")
             if result != "success":
                 print(result)
         except Exception as e:
@@ -1087,7 +1087,7 @@ def handle_selection_specific():
                     result = send_push_notification(
                         selected_user_uid,
                         "New Document",
-                        "A new document has been added!")
+                        f"{document_name} has been added!")
                     if result != "success":
                         print(result)
             except Exception as e:
