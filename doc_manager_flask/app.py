@@ -341,6 +341,7 @@ def prepare_query_snapshot(query_snapshot, domains, unique_document_names):
 @app.route('/document_history')
 @login_required
 def document_history():
+    collection_exception_list = ['messages', 'users']
     try:
         user_domain = session.get('domain', None)
         if not user_domain:
@@ -355,6 +356,8 @@ def document_history():
             # Get a list of all collections
             collections = [col.id for col in db.collections()]
             for collection in collections:
+                if collection in collection_exception_list:
+                    continue
                 # Clear old references
                 unique_document_names.clear()
                 documents_ref = db.collection(collection)
