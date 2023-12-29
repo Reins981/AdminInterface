@@ -226,6 +226,7 @@
                     {% endif %}
                 {% endif %}
             </div>
+            <br>
             <h1 class="mb-4">Create User</h1>
             <form method="POST" action="/create_user">
                 <div class="form-group">
@@ -270,14 +271,9 @@
                 <button type="submit" class="btn btn-primary" id="createUserButton">Create User</button>
             </form>
         </div>
+        <br>
 
-        <hr>
-
-        <div class="py-2">
-            <label for="searchEmail">Search by Email:</label>
-            <input type="text" id="searchEmail" class="form-control" onkeyup="filterUsers()">
-        </div>
-
+        <h1 class="mb-4">Manage Documents</h1>
         <div class="py-4">
 
             <!-- Upload Document Form -->
@@ -309,8 +305,13 @@
                     <div class="knight-rider"></div>
                 </div>
             </form>
+            <br>
 
             <h1 class="mb-4">Manage Users</h1>
+            <div class="py-2">
+                <label for="searchEmail">Search by Email:</label>
+                <input type="text" id="searchEmail" class="form-control" onkeyup="filterUsers()">
+            </div>
             <div class="py-4">
                 <label class="checkbox-container">
                     <input type="checkbox" id="selectAllUsers">
