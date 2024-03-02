@@ -309,7 +309,7 @@
 
             <h1 class="mb-4">Manage Users</h1>
             <div class="py-2">
-                <label for="searchEmail">Search by Email:</label>
+                <label for="searchEmail">Search by Email or Domain:</label>
                 <input type="text" id="searchEmail" class="form-control" onkeyup="filterUsers()">
             </div>
             <div class="py-4">
@@ -367,7 +367,7 @@
                             N/A
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="domain-cell">
                             <!-- Display the current domain -->
                             {% if user.custom_claims and 'domain' in user.custom_claims %}
                             {{ user.custom_claims['domain'] }}
@@ -535,7 +535,10 @@
 
             tableRows.forEach(row => {
                 const emailCell = row.querySelector('.email-cell');
-                if (emailCell.textContent.toLowerCase().includes(searchInput)) {
+                const domainCell = row.querySelector('.domain-cell');
+                const emailMatch = emailCell.textContent.toLowerCase().includes(searchInput);
+                const domainMatch = domainCell.textContent.toLowerCase().includes(searchInput);
+                if (emailMatch || domainMatch) {
                     row.style.display = 'table-row';
                 } else {
                     row.style.display = 'none';
