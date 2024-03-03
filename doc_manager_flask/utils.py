@@ -219,7 +219,8 @@ def upload_document(from_email, from_user_name, from_role, db, user_id, user_ema
                         "year": year,
                         "deleted_at": None,
                         "last_update": firestore.SERVER_TIMESTAMP,
-                        "is_new": False
+                        "is_new": False,
+                        "viewed": False
                     }
 
                     # Sanity check. This should never happen unless someone deletes the domain

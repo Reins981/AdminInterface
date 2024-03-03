@@ -239,7 +239,12 @@
 
                                     {% for category_name, category_documents in documents_by_category.items() %}
                                         <li class="category">
-                                            {{ category_name }}
+                                            {% if category_name == "My Documents" %}
+                                                {% set category_name = "Customer Documents" %}
+                                                Customer Documents
+                                            {% else %}
+                                                {{ category_name }}
+                                            {% endif %}
                                             <ul>
                                                 {% set documents_by_user = {} %}
                                                 {% for document in category_documents %}
@@ -252,7 +257,12 @@
                                                 {% endfor %}
 
                                                 {% for user, user_documents in documents_by_user.items() %}
-                                                    <li class="user-email">{{ user[0] ~ ' (' ~ user[1] ~ ')' }}
+                                                    <li class="user-email">
+                                                        {% if category_name == "Customer Documents" %}
+                                                            From: {{ user[0] ~ ' (' ~ user[1] ~ ')' }}
+                                                        {% else %}
+                                                            To: {{ user[0] ~ ' (' ~ user[1] ~ ')' }}
+                                                        {% endif %}
                                                         <ul>
                                                             {% for document in user_documents %}
                                                                 <li class="document-row" data-document-id="{{ document.document_id }}" data-new="{{ document.is_new }}">
@@ -262,6 +272,21 @@
                                                                             <br><span style="margin-left: 20px;" class="last-update">Last Update: {{ document.last_update }}</span>
                                                                             <br><span style="margin-left: 20px;" class="new-document">Document Status: {% if document.is_new %} New {% else %} Update {% endif %}</span>
                                                                             <br><span style="margin-left: 20px;" class="document-type">Document Type: {{ category_name }}</span>
+                                                                            {% if category_name != "Customer Documents" %}
+                                                                                <br>
+                                                                                <span style="margin-left: 20px;" class="document-viewed">
+                                                                                    Document Viewed:
+                                                                                    {% if document.viewed is defined %}
+                                                                                        {% if document.viewed %}
+                                                                                            <span style="background-color: orange; color: white; padding: 2px; border-radius: 5px;">Yes</span>
+                                                                                        {% else %}
+                                                                                            No
+                                                                                        {% endif %}
+                                                                                    {% else %}
+                                                                                        No
+                                                                                    {% endif %}
+                                                                                </span>
+                                                                            {% endif %}
                                                                         </li>
                                                                     </ul>
                                                                     <button class="btn btn-danger"
