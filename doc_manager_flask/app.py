@@ -324,8 +324,9 @@ def prepare_query_snapshot(query_snapshot, domains, unique_document_names):
         # Add the document ID to the dictionary
         document_data['document_id'] = document.id
         document_name = document_data['document_name']
+        selected_user_id = document_data['selected_user']
 
-        if document_name not in unique_document_names:
+        if (document_name, selected_user_id) not in unique_document_names:
             category_dict = get_dict_based_on_value_from_dict(
                 'name',
                 relevant_domain[0]['categories'],
@@ -333,7 +334,7 @@ def prepare_query_snapshot(query_snapshot, domains, unique_document_names):
             )
             if category_dict:
                 category_dict['documents'].append(document_data)
-            unique_document_names.add(document_name)
+            unique_document_names.add((document_name, selected_user_id))
 
     return domains
 
@@ -407,7 +408,7 @@ def delete_document():
         if existing_doc.exists:
             existing_data = existing_doc.to_dict()
             if (existing_data["category"] == document_category
-                    and existing_data["owner"] == user.uid):
+                    and existing_data["selected_user"] == user.uid):
                 # Update the existing document
                 # Set a timestamp field to mark the document as deleted
                 delete_time = firestore.SERVER_TIMESTAMP
@@ -960,6 +961,7 @@ def handle_selection():
                 session['display_name'] if session else "Default",
                 session['role'] if session else "Default",
                 db,
+                session['user_id'],
                 selected_user_uid,
                 selected_email,
                 selected_domain,
@@ -980,10 +982,8 @@ def handle_selection():
             return jsonify(response_data)
 
     pool.wait_completion()
-
     results = pool.thread_results()
     all_true = any(item[0] for item in results)
-
     if all_true:
         response_data['message'] = 'Document(s) uploaded successfully'
     else:
@@ -996,7 +996,6 @@ def handle_selection():
     # Send the notification mail
     user = auth.get_user_by_email(selected_email)
     status, msg = send_notification_mail(user.display_name, selected_email)
-
     if status != 'success':
         response_data['success'] = False
         response_data['message'] = ('Document(s) uploaded successfully '
@@ -1101,6 +1100,7 @@ def handle_selection_specific():
                         session['display_name'] if session else "Default",
                         session['role'] if session else "Default",
                         db,
+                        session['user_id'],
                         selected_user_uid,
                         selected_email,
                         selected_domain,
@@ -1134,7 +1134,7 @@ def handle_selection_specific():
 
         if user.display_name not in user_error_list:
             # Send the notification mail
-            print(f"Send mail to {user.display_name}: {selected_email}")
+            print(f"Sending mail to {user.display_name}: {selected_email}")
             status, msg = send_notification_mail(user.display_name, selected_email)
 
             if status != 'success':

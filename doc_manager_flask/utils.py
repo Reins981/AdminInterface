@@ -167,7 +167,7 @@ def get_dict_based_on_value_from_dict(key, list_of_dicts, target_value):
     return None
 
 
-def upload_document(from_email, from_user_name, from_role, db, user_id, user_email, user_domain, category, file_path):
+def upload_document(from_email, from_user_name, from_role, db, owner_user_id, selected_user_id, user_email, user_domain, category, file_path):
     if file_path:
         try:
             document_name = os.path.basename(file_path)
@@ -180,11 +180,11 @@ def upload_document(from_email, from_user_name, from_role, db, user_id, user_ema
             document_path = (f"{user_domain.lower()}"
                              f"/{category}"
                              f"/{year}"
-                             f"/{user_id}"
+                             f"/{selected_user_id}"
                              f"/{user_name}"
                              f"/{document_name}")
 
-            if user_id:
+            if selected_user_id:
                 def _upload_thread():
                     # Upload the document to Firebase Cloud Storage
                     bucket = storage.bucket()
@@ -194,7 +194,7 @@ def upload_document(from_email, from_user_name, from_role, db, user_id, user_ema
                         file_path,
                         content_type='application/pdf')
                     # Set metadata
-                    blob.metadata = {'uid': user_id}
+                    blob.metadata = {'uid': selected_user_id}
                     blob.patch()
 
                     # Calculate the current datetime
@@ -211,7 +211,8 @@ def upload_document(from_email, from_user_name, from_role, db, user_id, user_ema
                         "from_role": from_role,
                         "user_name": user_name,
                         "user_email": user_email,
-                        "owner": user_id,
+                        "owner": owner_user_id,
+                        "selected_user": selected_user_id,
                         "category": category,
                         "user_domain": user_domain,
                         "document_name": document_name,
@@ -222,17 +223,17 @@ def upload_document(from_email, from_user_name, from_role, db, user_id, user_ema
                         "is_new": False,
                         "viewed": False
                     }
-
                     # Sanity check. This should never happen unless someone deletes the domain
                     # which is highly unlikely
                     if 'domain' not in user.custom_claims:
-                        raise RuntimeError(f"Domain missing for user {user_id}")
+                        raise RuntimeError(f"Domain missing for user {selected_user_id}")
 
                     # Use the document name as a field to locate and update the document
                     documents_ref = db.collection("_".join(("documents", user_domain.lower())))
 
                     query = (documents_ref.
-                             where("owner", "==", user_id).
+                             where("owner", "==", owner_user_id).
+                             where("selected_user", "==", selected_user_id).
                              where("category", "==", category).
                              where("document_name", "==", document_name).
                              where("user_domain", "==", user.custom_claims['domain']))
