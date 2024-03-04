@@ -164,6 +164,18 @@
             color: #ffffff;
         }
 
+        /* Highlight new documents */
+        .tree li.document-row[data-new="False"] {
+            background-color: #ffff00;
+            color: #000000; /* Text color for highlighted documents */
+        }
+
+        /* Ensure readable text on highlighted documents */
+        .tree li.document-row[data-new="False"]:hover {
+            background-color: #e5e500; /* Darker shade of yellow */
+            color: #000000;
+        }
+
     </style>
 </head>
 <body>
@@ -270,7 +282,7 @@
                                                                     <ul>
                                                                         <li class="document-name">{{ document.document_name }}
                                                                             <br><span style="margin-left: 20px;" class="last-update">Last Update: {{ document.last_update }}</span>
-                                                                            <br><span style="margin-left: 20px;" class="new-document">Document Status: {% if document.is_new %} New {% else %} Update {% endif %}</span>
+                                                                            <br><span style="margin-left: 20px;" class="new-document">Document Status: {% if document.is_new %} New {% else %} Updated {% endif %}</span>
                                                                             <br><span style="margin-left: 20px;" class="document-type">Document Type: {{ category_name }}</span>
                                                                             {% if category_name != "Customer Documents" %}
                                                                                 <br>
