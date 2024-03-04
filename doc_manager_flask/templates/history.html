@@ -66,6 +66,13 @@
             cursor: pointer;
         }
 
+        .highlight-yes {
+            background-color: #2ecc71;
+            color: white;
+            padding: 2px;
+            border-radius: 5px;
+        }
+
         .btn-primary:hover {
             box-shadow: 0 0 5px 5px rgba(255, 204, 0, 0.7); /* Yellow shadow on hover */
         }
@@ -290,7 +297,7 @@
                                                                                     Document Viewed:
                                                                                     {% if document.viewed is defined %}
                                                                                         {% if document.viewed %}
-                                                                                            <span style="background-color: orange; color: white; padding: 2px; border-radius: 5px;">Yes</span>
+                                                                                            <span class="highlight-yes">Yes</span>
                                                                                         {% else %}
                                                                                             No
                                                                                         {% endif %}
