@@ -167,21 +167,21 @@ def get_dict_based_on_value_from_dict(key, list_of_dicts, target_value):
     return None
 
 
-def upload_document(from_email, from_user_name, from_role, db, owner_user_id, selected_user_id, user_email, user_domain, category, file_path):
+def upload_document(from_email, from_user_name, from_role, db, owner_user_id, selected_user_id, to_email, user_domain, category, file_path):
     if file_path:
         try:
             document_name = os.path.basename(file_path)
             print(f"{current_thread()} uploading file `{document_name}`")
             # Sanity check if the user still exists
-            user = auth.get_user_by_email(user_email)  # Replace with the user's email
-            user_name = user.display_name if user.display_name else "None"
+            user = auth.get_user_by_email(to_email)  # Replace with the user's email
+            to_user_name = user.display_name if user.display_name else "None"
 
             year = datetime.datetime.now().year
             document_path = (f"{user_domain.lower()}"
                              f"/{category}"
                              f"/{year}"
                              f"/{selected_user_id}"
-                             f"/{user_name}"
+                             f"/{to_user_name}"
                              f"/{document_name}")
 
             if selected_user_id:
@@ -209,8 +209,8 @@ def upload_document(from_email, from_user_name, from_role, db, owner_user_id, se
                         "from_email": from_email,
                         "from_user_name": from_user_name,
                         "from_role": from_role,
-                        "user_name": user_name,
-                        "user_email": user_email,
+                        "to_user_name": to_user_name,
+                        "to_email": to_email,
                         "owner": owner_user_id,
                         "selected_user": selected_user_id,
                         "category": category,
