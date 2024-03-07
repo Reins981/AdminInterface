@@ -267,8 +267,8 @@
                                             <ul>
                                                 {% set documents_by_user = {} %}
                                                 {% for document in category_documents %}
-                                                    {% set user_email = document.get('user_email') %}
-                                                    {% set user_name = document.get('user_name') %}
+                                                    {% set user_email = document.get('to_email') %}
+                                                    {% set user_name = document.get('to_user_name') %}
                                                     {% if (user_email, user_name) not in documents_by_user %}
                                                         {% set _ = documents_by_user.update({(user_email, user_name): []}) %}
                                                     {% endif %}
@@ -312,14 +312,14 @@
                                                                             data-document-id="{{ document.document_id }}"
                                                                             data-document-domain="{{ domain.name }}"
                                                                             data-document-category="{{ category_name }}"
-                                                                            data-document-email="{{ document.user_email }}"
+                                                                            data-document-email="{{ document.to_email }}"
                                                                             onclick="deleteDocument(
                                                                                 '{{ document.document_id }}',
                                                                                 '{{ document.document_name }}',
                                                                                 '{{ document.year }}',
                                                                                 '{{ domain.name }}',
                                                                                 '{{ category_name }}',
-                                                                                '{{ document.user_email }}'
+                                                                                '{{ document.to_email }}'
                                                                             )">Delete</button>
                                                                     <button class="btn btn-success ml-2"
                                                                             data-document-id="{{ document.document_id }}"
