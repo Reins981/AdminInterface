@@ -407,30 +407,26 @@ def delete_document():
 
         if existing_doc.exists:
             existing_data = existing_doc.to_dict()
-            if (existing_data["category"] == document_category
-                    and existing_data["selected_user"] == user.uid):
-                # Update the existing document
-                # Set a timestamp field to mark the document as deleted
-                delete_time = firestore.SERVER_TIMESTAMP
-                documents_ref.document(document_id).update({"deleted_at": delete_time})
-                # Delete the document
-                documents_ref.document(document_id).delete()
+            # Update the existing document
+            # Set a timestamp field to mark the document as deleted
+            delete_time = firestore.SERVER_TIMESTAMP
+            documents_ref.document(document_id).update({"deleted_at": delete_time})
+            # Delete the document
+            documents_ref.document(document_id).delete()
+            document_category = document_category if document_category != "Customer Documents" else existing_data['category']
 
-                # Delete the document from Firebase Cloud Storage
-                storage_bucket = storage.bucket()
-                file_path = (f"{document_domain.lower()}/"
-                             f"{document_category}/"
-                             f"{document_year}/"
-                             f"{user.uid}/"
-                             f"{user.display_name}/"
-                             f"{document_name}")
+            # Delete the document from Firebase Cloud Storage
+            storage_bucket = storage.bucket()
+            file_path = (f"{document_domain.lower()}/"
+                         f"{document_category}/"
+                         f"{document_year}/"
+                         f"{user.uid}/"
+                         f"{user.display_name}/"
+                         f"{document_name}")
 
-                blob = storage_bucket.blob(file_path)
-                blob.delete()
-
-                response = {'success': True}
-            else:
-                response = {'success': False, 'error': 'Document properties do not match'}
+            blob = storage_bucket.blob(file_path)
+            blob.delete()
+            response = {'success': True}
         else:
             response = {'success': False, 'error': 'Document does not exist'}
     except Exception as e:
